@@ -54,6 +54,11 @@ class Game {
             this.gameCompletedSound.volume = 0.7; // Set volume to 70%
         }
         
+        this.eatingSound = document.getElementById('eating-sound');
+        if (this.eatingSound) {
+            this.eatingSound.volume = 0.6; // Set volume to 60%
+        }
+        
         // Set initial canvas size
         this.resizeCanvases();
         window.addEventListener('resize', () => this.resizeCanvases());
@@ -145,7 +150,7 @@ class Game {
         }
 
         // Initialize game logic
-        this.gameLogic = new GameLogic(this.gameCanvas, this.faceDetection);
+        this.gameLogic = new GameLogic(this.gameCanvas, this.faceDetection, this.eatingSound);
         this.gameLogic.reset();
         
         // Play background music

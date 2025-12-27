@@ -1,10 +1,11 @@
 // gameLogic.js - Game mechanics, objects, collision detection, and scoring
 
 class GameLogic {
-    constructor(canvas, faceDetection) {
+    constructor(canvas, faceDetection, eatingSound = null) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.faceDetection = faceDetection;
+        this.eatingSound = eatingSound;
         
         this.score = 0;
         this.highScore = this.loadHighScore();
@@ -162,7 +163,15 @@ class GameLogic {
 
     onFoodEaten() {
         // Visual feedback - can add particle effects here
-        // Audio feedback - can add sound effects here
+        
+        // Audio feedback - play eating sound effect
+        if (this.eatingSound) {
+            // Reset to beginning and play
+            this.eatingSound.currentTime = 0;
+            this.eatingSound.play().catch(error => {
+                console.log('Eating sound play failed:', error);
+            });
+        }
     }
 
     render() {
