@@ -43,6 +43,17 @@ class Game {
         this.finalScoreDisplay = document.getElementById('final-score');
         this.endHighScoreDisplay = document.getElementById('end-high-score');
         
+        // Audio
+        this.bgMusic = document.getElementById('bg-music');
+        if (this.bgMusic) {
+            this.bgMusic.volume = 0.5; // Set volume to 50%
+        }
+        
+        this.gameCompletedSound = document.getElementById('game-completed-sound');
+        if (this.gameCompletedSound) {
+            this.gameCompletedSound.volume = 0.7; // Set volume to 70%
+        }
+        
         // Set initial canvas size
         this.resizeCanvases();
         window.addEventListener('resize', () => this.resizeCanvases());
@@ -137,6 +148,14 @@ class Game {
         this.gameLogic = new GameLogic(this.gameCanvas, this.faceDetection);
         this.gameLogic.reset();
         
+        // Play background music
+        if (this.bgMusic) {
+            this.bgMusic.play().catch(error => {
+                console.log('Audio play failed:', error);
+                // Some browsers require user interaction before playing audio
+            });
+        }
+        
         // Show game screen
         this.showScreen('game');
         
@@ -185,12 +204,22 @@ class Game {
         if (this.gameLogic) {
             this.gameLogic.pause();
         }
+        // Pause background music
+        if (this.bgMusic && !this.bgMusic.paused) {
+            this.bgMusic.pause();
+        }
         this.showScreen('pause');
     }
 
     resumeGame() {
         if (this.gameLogic) {
             this.gameLogic.resume();
+        }
+        // Resume background music
+        if (this.bgMusic && this.bgMusic.paused) {
+            this.bgMusic.play().catch(error => {
+                console.log('Audio play failed:', error);
+            });
         }
         this.showScreen('game');
     }
@@ -206,6 +235,20 @@ class Game {
             this.gameLoopId = null;
         }
 
+        // Stop background music
+        if (this.bgMusic) {
+            this.bgMusic.pause();
+            this.bgMusic.currentTime = 0; // Reset to beginning
+        }
+
+        // Play game completed sound effect
+        if (this.gameCompletedSound) {
+            this.gameCompletedSound.currentTime = 0; // Reset to beginning
+            this.gameCompletedSound.play().catch(error => {
+                console.log('Game completed sound play failed:', error);
+            });
+        }
+
         if (this.gameLogic) {
             this.finalScoreDisplay.textContent = this.gameLogic.getScore();
             this.endHighScoreDisplay.textContent = this.gameLogic.getHighScore();
@@ -219,6 +262,11 @@ class Game {
         if (this.gameLoopId) {
             cancelAnimationFrame(this.gameLoopId);
             this.gameLoopId = null;
+        }
+        // Stop background music when returning to start screen
+        if (this.bgMusic) {
+            this.bgMusic.pause();
+            this.bgMusic.currentTime = 0;
         }
     }
 
