@@ -1,7 +1,7 @@
 // gameLogic.js - Game mechanics, objects, collision detection, and scoring
 
 class GameLogic {
-    constructor(canvas, faceDetection, eatingSound = null) {
+    constructor(canvas, faceDetection, eatingSound = null, difficulty = 'medium', gameTime = 60) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.faceDetection = faceDetection;
@@ -9,10 +9,11 @@ class GameLogic {
         
         this.score = 0;
         this.highScore = this.loadHighScore();
-        this.gameTime = 60; // 60 seconds
+        this.gameTime = gameTime;
         this.timeRemaining = this.gameTime;
         this.isPaused = false;
         this.isGameOver = false;
+        this.difficulty = difficulty;
         
         this.foodObjects = [];
         this.foodImages = [];
@@ -23,12 +24,35 @@ class GameLogic {
             'assets/food/fries-asset.webp',
         ];
         
-        this.spawnInterval = 2000; // Spawn food every 2 seconds
+        // Difficulty-based settings
+        this.setDifficultySettings(difficulty);
+        
         this.lastSpawnTime = 0;
         this.eatCooldown = 300; // 300ms cooldown between eating
         this.lastEatTime = 0;
         
         this.loadFoodImages();
+    }
+
+    setDifficultySettings(difficulty) {
+        switch(difficulty) {
+            case 'easy':
+                this.spawnInterval = 2500; // Spawn food every 2.5 seconds
+                this.baseSpeed = 0.8; // Slower speed
+                this.maxSpeed = 1.5;
+                break;
+            case 'hard':
+                this.spawnInterval = 1200; // Spawn food every 1.2 seconds
+                this.baseSpeed = 1.5; // Faster speed
+                this.maxSpeed = 3.0;
+                break;
+            case 'medium':
+            default:
+                this.spawnInterval = 2000; // Spawn food every 2 seconds
+                this.baseSpeed = 1.0; // Normal speed
+                this.maxSpeed = 2.0;
+                break;
+        }
     }
 
     async loadFoodImages() {
@@ -54,6 +78,8 @@ class GameLogic {
         this.isGameOver = false;
         this.lastSpawnTime = 0;
         this.lastEatTime = 0;
+        // Reapply difficulty settings in case difficulty changed
+        this.setDifficultySettings(this.difficulty);
     }
 
     update(deltaTime) {
@@ -94,13 +120,16 @@ class GameLogic {
         const randomImage = this.foodImages[Math.floor(Math.random() * this.foodImages.length)];
         const size = 60 + Math.random() * 40; // Random size between 60-100
         
+        // Use difficulty-based speed
+        const speed = this.baseSpeed + Math.random() * (this.maxSpeed - this.baseSpeed);
+        
         const food = {
             x: Math.random() * (this.canvas.width - size),
             y: -size,
             width: size,
             height: size,
             image: randomImage,
-            speed: 1 + Math.random() * 2, // Random speed
+            speed: speed,
             rotation: Math.random() * Math.PI * 2,
             rotationSpeed: (Math.random() - 0.5) * 0.1
         };
@@ -196,11 +225,14 @@ class GameLogic {
                     food.height
                 );
             } else {
-                // Fallback: draw colored circle
-                this.ctx.fillStyle = '#ff6b6b';
+                // Fallback: draw colored circle - minimalist style
+                this.ctx.fillStyle = '#ff8222';
+                this.ctx.strokeStyle = '#212121';
+                this.ctx.lineWidth = 2;
                 this.ctx.beginPath();
                 this.ctx.arc(0, 0, food.width / 2, 0, Math.PI * 2);
                 this.ctx.fill();
+                this.ctx.stroke();
             }
             
             this.ctx.restore();

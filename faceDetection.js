@@ -119,10 +119,10 @@ class FaceDetection {
     drawMouth(ctx, landmarks) {
         if (!this.mouthOpen) return;
 
-        // Draw mouth circle for visual feedback
-        ctx.strokeStyle = '#00ff00';
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
-        ctx.lineWidth = 3;
+        // Draw mouth circle for visual feedback - minimalist style
+        ctx.strokeStyle = '#8ec622';
+        ctx.fillStyle = 'rgba(142, 198, 34, 0.15)';
+        ctx.lineWidth = 2;
         
         const x = this.canvas.width - this.mouthPosition.x;
         const y = this.mouthPosition.y;
