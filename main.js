@@ -58,6 +58,14 @@ class Game {
         this.settingsCloseBtn = document.getElementById('settings-close-btn');
         this.tutorialCloseBtn = document.getElementById('tutorial-close-btn');
         
+        // Photo Screen Elements
+        this.photoScreen = document.getElementById('photo-screen');
+        this.photoCanvas = document.getElementById('photo-canvas');
+        this.photoBtn = document.getElementById('photo-btn');
+        this.downloadPhotoBtn = document.getElementById('download-photo-btn');
+        this.sharePhotoBtn = document.getElementById('share-photo-btn');
+        this.photoCloseBtn = document.getElementById('photo-close-btn');
+        
         // Settings Controls
         this.audioToggle = document.getElementById('audio-toggle');
         this.volumeSlider = document.getElementById('volume-slider');
@@ -127,6 +135,20 @@ class Game {
         }
         if (this.tutorialCloseBtn) {
             this.tutorialCloseBtn.addEventListener('click', () => this.closeTutorial());
+        }
+        
+        // Photo screen buttons
+        if (this.photoBtn) {
+            this.photoBtn.addEventListener('click', () => this.showPhotoScreen());
+        }
+        if (this.downloadPhotoBtn) {
+            this.downloadPhotoBtn.addEventListener('click', () => this.downloadPhoto());
+        }
+        if (this.sharePhotoBtn) {
+            this.sharePhotoBtn.addEventListener('click', () => this.sharePhoto());
+        }
+        if (this.photoCloseBtn) {
+            this.photoCloseBtn.addEventListener('click', () => this.closePhotoScreen());
         }
         
         // Settings controls
@@ -464,9 +486,187 @@ class Game {
             case 'tutorial':
                 if (this.tutorialScreen) this.tutorialScreen.classList.add('active');
                 break;
+            case 'photo':
+                if (this.photoScreen) this.photoScreen.classList.add('active');
+                break;
         }
 
         this.currentScreen = screenName;
+    }
+
+    async showPhotoScreen() {
+        // Capture photo
+        await this.capturePhoto();
+        
+        // Show photo screen
+        this.previousScreen = this.currentScreen;
+        this.showScreen('photo');
+    }
+
+    async capturePhoto() {
+        if (!this.video || !this.photoCanvas) return null;
+        
+        const ctx = this.photoCanvas.getContext('2d');
+        
+        // Set canvas size (mirror video untuk foto)
+        const videoWidth = this.video.videoWidth;
+        const videoHeight = this.video.videoHeight;
+        
+        if (videoWidth === 0 || videoHeight === 0) {
+            console.warn('Video not ready for capture');
+            return null;
+        }
+        
+        // Set canvas size (bisa diatur sesuai kebutuhan)
+        const maxWidth = 800;
+        const maxHeight = 600;
+        const aspectRatio = videoWidth / videoHeight;
+        
+        let canvasWidth = maxWidth;
+        let canvasHeight = maxWidth / aspectRatio;
+        
+        if (canvasHeight > maxHeight) {
+            canvasHeight = maxHeight;
+            canvasWidth = maxHeight * aspectRatio;
+        }
+        
+        this.photoCanvas.width = canvasWidth;
+        this.photoCanvas.height = canvasHeight;
+        
+        // Draw video frame (flip untuk mirror effect)
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(this.video, -canvasWidth, 0, canvasWidth, canvasHeight);
+        ctx.restore();
+        
+        // Draw overlay dengan score
+        this.drawPhotoOverlay(ctx, canvasWidth, canvasHeight);
+        
+        return this.photoCanvas.toDataURL('image/png');
+    }
+
+    drawPhotoOverlay(ctx, width, height) {
+        // Gradient background untuk overlay
+        const gradient = ctx.createLinearGradient(0, height - 200, 0, height);
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.85)');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, height - 200, width, 200);
+        
+        // Draw score information
+        const score = this.gameLogic ? this.gameLogic.getScore() : 0;
+        const highScore = this.gameLogic ? this.gameLogic.getHighScore() : 0;
+        
+        // Logo/Brand
+        ctx.fillStyle = '#8ec622';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🍔 Bangor Bites', width / 2, height - 150);
+        
+        // Score
+        ctx.fillStyle = '#fffee6';
+        ctx.font = 'bold 48px Arial';
+        ctx.fillText(`Skor: ${score}`, width / 2, height - 100);
+        
+        // High Score
+        ctx.fillStyle = '#ff8222';
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText(`High Score: ${highScore}`, width / 2, height - 60);
+        
+        // Hashtag
+        ctx.fillStyle = '#4daadd';
+        ctx.font = '20px Arial';
+        ctx.fillText('#BangorBitesChallenge', width / 2, height - 25);
+        
+        // Optional: Draw border
+        ctx.strokeStyle = '#212121';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(0, 0, width, height);
+    }
+
+    closePhotoScreen() {
+        this.showScreen(this.previousScreen);
+    }
+
+    downloadPhoto() {
+        if (!this.photoCanvas) return;
+        
+        // Convert canvas to blob
+        this.photoCanvas.toBlob((blob) => {
+            if (!blob) {
+                console.error('Failed to create blob');
+                return;
+            }
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bangor-bites-score-${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 'image/png');
+    }
+
+    async sharePhoto() {
+        if (!this.photoCanvas) return;
+        
+        try {
+            // Convert canvas to blob
+            const blob = await new Promise((resolve, reject) => {
+                this.photoCanvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Failed to create blob'));
+                    }
+                }, 'image/png');
+            });
+            
+            const score = this.gameLogic ? this.gameLogic.getScore() : 0;
+            
+            // Check if Web Share API is available
+            if (navigator.share && navigator.canShare) {
+                const file = new File([blob], `bangor-bites-score-${Date.now()}.png`, {
+                    type: 'image/png'
+                });
+                
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: 'Bangor Bites Challenge - Skor Saya!',
+                        text: `Saya dapat skor ${score} di Bangor Bites Challenge! Coba kalahkan skorku! #BangorBitesChallenge`,
+                        files: [file]
+                    });
+                    return;
+                }
+            }
+            
+            // Fallback: copy to clipboard or download
+            if (navigator.clipboard && navigator.clipboard.write) {
+                try {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    alert('Foto berhasil disalin ke clipboard! Paste di aplikasi yang kamu inginkan.');
+                } catch (clipboardError) {
+                    console.log('Clipboard error:', clipboardError);
+                    // Fallback to download
+                    this.downloadPhoto();
+                    alert('Foto berhasil diunduh! Kamu bisa share dari galeri.');
+                }
+            } else {
+                // Final fallback: download
+                this.downloadPhoto();
+                alert('Foto berhasil diunduh! Kamu bisa share dari galeri.');
+            }
+        } catch (error) {
+            console.error('Share error:', error);
+            // Fallback to download
+            this.downloadPhoto();
+            alert('Foto berhasil diunduh! Kamu bisa share dari galeri.');
+        }
     }
 }
 

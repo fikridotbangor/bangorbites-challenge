@@ -54,8 +54,24 @@
                 <p class="high-score-text">Skor Tertinggi: <span id="end-high-score">0</span></p>
             </div>
             <div class="button-group">
-                <button id="replay-btn" class="btn btn-primary">Main Lagi</button>
-                <button id="home-btn" class="btn btn-secondary">Kembali ke Menu</button>
+                <button id="photo-btn" class="btn btn-primary">📸 Ambil Foto</button>
+                <button id="replay-btn" class="btn btn-secondary">Main Lagi</button>
+                <button id="home-btn" class="btn btn-small">Kembali ke Menu</button>
+            </div>
+        </div>
+
+        <!-- Photo Screen -->
+        <div id="photo-screen" class="screen overlay">
+            <div class="photo-content">
+                <h2>📸 Foto Score Kamu!</h2>
+                <div class="photo-preview-container">
+                    <canvas id="photo-canvas"></canvas>
+                </div>
+                <div class="button-group" style="margin-top: 2rem;">
+                    <button id="download-photo-btn" class="btn btn-primary">💾 Download Foto</button>
+                    <button id="share-photo-btn" class="btn btn-secondary">📤 Share</button>
+                    <button id="photo-close-btn" class="btn btn-small">Kembali</button>
+                </div>
             </div>
         </div>
 

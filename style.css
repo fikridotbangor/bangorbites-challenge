@@ -524,6 +524,41 @@ body {
     font-weight: 600;
 }
 
+/* Photo Screen */
+.photo-content {
+    background: #fffee6;
+    padding: 40px;
+    border-radius: 8px;
+    border: 3px solid #212121;
+    max-width: 600px;
+    width: 90%;
+    text-align: center;
+}
+
+.photo-content h2 {
+    font-size: 2.5rem;
+    color: #212121;
+    margin-bottom: 2rem;
+    font-weight: 700;
+}
+
+.photo-preview-container {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    border: 3px solid #212121;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #212121;
+}
+
+#photo-canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
 /* Responsive for Settings and Tutorial */
 @media (max-width: 768px) {
     .settings-content,
@@ -545,6 +580,14 @@ body {
     .game-header-buttons {
         flex-direction: column;
         gap: 5px;
+    }
+
+    .photo-content {
+        padding: 20px;
+    }
+    
+    .photo-content h2 {
+        font-size: 2rem;
     }
 }
 
