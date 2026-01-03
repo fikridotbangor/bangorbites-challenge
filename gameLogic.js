@@ -18,10 +18,21 @@ class GameLogic {
         this.foodObjects = [];
         this.foodImages = [];
         this.foodAssets = [
-            'assets/food/burger-asset.webp',
-            'assets/food/chicken-asset.webp',
-            'assets/food/drink-asset.webp',
-            'assets/food/fries-asset.webp',
+            'assets/food-2/bangor_cheese_jr.webp',
+            'assets/food-2/bbq_smoke_beef_cheese.webp',
+            'assets/food-2/bbq_smoke_beef.webp',
+            'assets/food-2/bfc_paha.webp',
+            'assets/food-2/congor_cheese.webp',
+            'assets/food-2/creamy_garlic_cheese.webp',
+            'assets/food-2/french_fries.webp',
+            'assets/food-2/fries_cheese.webp',
+            'assets/food-2/hotdog.webp',
+            'assets/food-2/jelata_cheese.webp',
+            'assets/food-2/juragan_cheese.webp',
+            'assets/food-2/ningrat_cheese.webp',
+            'assets/food-2/pitik_cheese.webp',
+            'assets/food-2/pitik_fire_cheese.webp',
+            'assets/food-2/sultan.webp',
         ];
         
         // Difficulty-based settings
