@@ -81,6 +81,14 @@ class Game {
         // Set initial canvas size
         this.resizeCanvases();
         window.addEventListener('resize', () => this.resizeCanvases());
+        
+        // Load mascot images for photo screen
+        this.mascotImages = [];
+        this.loadMascotImages();
+        
+        // Load logo for photo screen
+        this.logoImage = null;
+        this.loadLogoImage();
     }
 
     resizeCanvases() {
@@ -517,27 +525,44 @@ class Game {
             return null;
         }
         
-        // Set canvas size (bisa diatur sesuai kebutuhan)
-        const maxWidth = 800;
-        const maxHeight = 600;
-        const aspectRatio = videoWidth / videoHeight;
-        
-        let canvasWidth = maxWidth;
-        let canvasHeight = maxWidth / aspectRatio;
-        
-        if (canvasHeight > maxHeight) {
-            canvasHeight = maxHeight;
-            canvasWidth = maxHeight * aspectRatio;
-        }
+        // Set canvas size to 1080x1080 (square)
+        const canvasWidth = 1080;
+        const canvasHeight = 1080;
+        const videoAspectRatio = videoWidth / videoHeight;
+        const canvasAspectRatio = canvasWidth / canvasHeight;
         
         this.photoCanvas.width = canvasWidth;
         this.photoCanvas.height = canvasHeight;
         
+        // Enable high-quality rendering
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        // Calculate video draw size to fit in square canvas (letterbox/pillarbox)
+        let drawWidth, drawHeight, drawX, drawY;
+        
+        if (videoAspectRatio > canvasAspectRatio) {
+            // Video is wider - fit to width (pillarbox)
+            drawWidth = canvasWidth;
+            drawHeight = canvasWidth / videoAspectRatio;
+            drawX = 0;
+            drawY = (canvasHeight - drawHeight) / 2;
+        } else {
+            // Video is taller - fit to height (letterbox)
+            drawHeight = canvasHeight;
+            drawWidth = canvasHeight * videoAspectRatio;
+            drawX = (canvasWidth - drawWidth) / 2;
+            drawY = 0;
+        }
+        
         // Draw video frame (flip untuk mirror effect)
         ctx.save();
         ctx.scale(-1, 1);
-        ctx.drawImage(this.video, -canvasWidth, 0, canvasWidth, canvasHeight);
+        ctx.drawImage(this.video, -drawX - drawWidth, drawY, drawWidth, drawHeight);
         ctx.restore();
+        
+        // Draw mascots in corners
+        this.drawPhotoMascots(ctx, canvasWidth, canvasHeight);
         
         // Draw overlay dengan score
         this.drawPhotoOverlay(ctx, canvasWidth, canvasHeight);
@@ -545,43 +570,169 @@ class Game {
         return this.photoCanvas.toDataURL('image/png');
     }
 
+    async loadMascotImages() {
+        const mascotAssets = [
+            'assets/mascot/Barboy.png',        // Top-left
+            'assets/mascot/Barboy_2.png',      // Top-right
+            'assets/mascot/Jakrunchy.png',     // Bottom-left
+            'assets/mascot/Munchie.png',       // Bottom-right
+        ];
+        
+        for (const asset of mascotAssets) {
+            const img = new Image();
+            img.src = asset;
+            await new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = () => {
+                    console.warn(`Failed to load mascot ${asset}`);
+                    resolve();
+                };
+            });
+            this.mascotImages.push(img);
+        }
+    }
+
+    async loadLogoImage() {
+        const img = new Image();
+        img.src = 'assets/logo/Bangor 2026 hitam.png';
+        await new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = () => {
+                console.warn('Failed to load logo');
+                resolve();
+            };
+        });
+        this.logoImage = img;
+    }
+
+    drawPhotoMascots(ctx, width, height) {
+        if (this.mascotImages.length < 4) return;
+
+        // Enable high-quality rendering
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        // Scale for 1080x1080 resolution (base was 800px, scale factor ~1.35)
+        const mascotSize = 162; // Size of mascot images (scaled from 120)
+        const padding = 27; // Padding from edges (scaled from 20)
+
+        // Top-left corner: Barboy
+        if (this.mascotImages[0]) {
+            ctx.drawImage(
+                this.mascotImages[0],
+                padding,
+                padding,
+                mascotSize,
+                mascotSize
+            );
+        }
+
+        // Top-right corner: Barboy_2
+        if (this.mascotImages[1]) {
+            ctx.drawImage(
+                this.mascotImages[1],
+                width - mascotSize - padding,
+                padding,
+                mascotSize,
+                mascotSize
+            );
+        }
+
+        // Bottom-left corner: Jakrunchy
+        if (this.mascotImages[2]) {
+            ctx.drawImage(
+                this.mascotImages[2],
+                padding,
+                height - mascotSize - padding,
+                mascotSize,
+                mascotSize
+            );
+        }
+
+        // Bottom-right corner: Munchie
+        if (this.mascotImages[3]) {
+            ctx.drawImage(
+                this.mascotImages[3],
+                width - mascotSize - padding,
+                height - mascotSize - padding,
+                mascotSize,
+                mascotSize
+            );
+        }
+    }
+
     drawPhotoOverlay(ctx, width, height) {
+        // Enable high-quality rendering
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        // Scale for 1080x1080 resolution (base was 800px, scale factor ~1.35)
+        const overlayHeight = 270; // Scaled from 200
+        
         // Gradient background untuk overlay
-        const gradient = ctx.createLinearGradient(0, height - 200, 0, height);
+        const gradient = ctx.createLinearGradient(0, height - overlayHeight, 0, height);
         gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
         gradient.addColorStop(1, 'rgba(0, 0, 0, 0.85)');
         
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, height - 200, width, 200);
+        ctx.fillRect(0, height - overlayHeight, width, overlayHeight);
+        
+        // Set text alignment to center for all text
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         
         // Draw score information
         const score = this.gameLogic ? this.gameLogic.getScore() : 0;
         const highScore = this.gameLogic ? this.gameLogic.getHighScore() : 0;
         
-        // Logo/Brand
-        ctx.fillStyle = '#8ec622';
-        ctx.font = 'bold 32px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('🍔 Bangor Bites', width / 2, height - 150);
+        // Logo/Brand - centered (white color)
+        if (this.logoImage && this.logoImage.complete) {
+            const logoHeight = 40; // Scaled from 60 (30*2.7 for better visibility)
+            const logoWidth = (this.logoImage.width / this.logoImage.height) * logoHeight;
+            const logoX = width / 2;
+            const logoY = height - 216 + logoHeight / 2; // Scaled from 160
+            
+            // Save context state
+            ctx.save();
+            
+            // Apply filter to convert black to white
+            ctx.filter = 'brightness(0) invert(1)';
+            
+            ctx.drawImage(
+                this.logoImage,
+                logoX - logoWidth / 2,
+                logoY - logoHeight / 2,
+                logoWidth,
+                logoHeight
+            );
+            
+            // Restore context state
+            ctx.restore();
+        } else {
+            // Fallback to text if logo not loaded
+            ctx.fillStyle = '#8ec622';
+            ctx.font = 'bold 43px Arial'; // Scaled from 32
+            ctx.fillText('🍔 Bangor Bites', width / 2, height - 203); // Scaled from 150
+        }
         
-        // Score
+        // Score - centered
         ctx.fillStyle = '#fffee6';
-        ctx.font = 'bold 48px Arial';
-        ctx.fillText(`Skor: ${score}`, width / 2, height - 100);
+        ctx.font = 'bold 65px Arial'; // Scaled from 48
+        ctx.fillText(`Skor: ${score}`, width / 2, height - 135); // Scaled from 100
         
-        // High Score
+        // High Score - centered
         ctx.fillStyle = '#ff8222';
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText(`High Score: ${highScore}`, width / 2, height - 60);
+        ctx.font = 'bold 32px Arial'; // Scaled from 24
+        ctx.fillText(`High Score: ${highScore}`, width / 2, height - 81); // Scaled from 60
         
-        // Hashtag
+        // Hashtag - centered
         ctx.fillStyle = '#4daadd';
-        ctx.font = '20px Arial';
-        ctx.fillText('#BangorBitesChallenge', width / 2, height - 25);
+        ctx.font = '27px Arial'; // Scaled from 20
+        ctx.fillText('#BangorBitesChallenge', width / 2, height - 34); // Scaled from 25
         
         // Optional: Draw border
         ctx.strokeStyle = '#212121';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4; // Scaled from 3
         ctx.strokeRect(0, 0, width, height);
     }
 
