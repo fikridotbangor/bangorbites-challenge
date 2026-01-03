@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bangor Bites Challenge 🎮</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
         <!-- Start Screen -->
         <div id="start-screen" class="screen active">
+            <img src="assets/logo/Bangor 2026 hitam.png" alt="Bangor Logo" class="start-logo">
             <h1 class="game-title">🍔 Bangor Bites Challenge 🍔</h1>
             <p class="game-subtitle">Buka mulutmu untuk memakan objek!</p>
             <div class="button-group">
@@ -27,15 +31,18 @@
         <div id="game-screen" class="screen">
             <div class="game-header">
                 <div class="score-display">
+                    <img src="assets/logo/Bangor 2026 hitam.png" alt="Bangor Logo" class="game-logo">
                     <span>Skor: <span id="current-score">0</span></span>
                     <span>High Score: <span id="high-score">0</span></span>
                 </div>
                 <div class="timer-display">
                     <span>Waktu: <span id="timer">60</span>s</span>
                 </div>
-                <div class="game-header-buttons">
-                    <button id="game-settings-btn" class="btn btn-small">⚙️</button>
-                    <button id="pause-btn" class="btn btn-small">⏸ Pause</button>
+                <div class="game-header-right">
+                    <div class="game-header-buttons">
+                        <button id="game-settings-btn" class="btn btn-small">⚙️</button>
+                        <button id="pause-btn" class="btn btn-small">⏸ Pause</button>
+                    </div>
                 </div>
             </div>
             

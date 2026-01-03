@@ -6,7 +6,7 @@
 
 body {
     font-family: 'Arial', sans-serif;
-    background: #fffee6;
+    background: #8ec622;
     min-height: 100vh;
     display: flex;
     justify-content: center;
@@ -42,14 +42,17 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    background: rgba(255, 254, 230, 0.95);
+    background: rgba(142, 198, 34, 0.95);
     z-index: 1000;
 }
 
 /* Start Screen */
 .game-title {
+    /* all big text */
+    font-family: 'Poppins', sans-serif;
+    text-transform: uppercase;
     font-size: 3.5rem;
-    color: #212121;
+    color: #fffee6;
     margin-bottom: 1rem;
     font-weight: 700;
     letter-spacing: -1px;
@@ -57,10 +60,18 @@ body {
 
 .game-subtitle {
     font-size: 1.5rem;
-    color: #212121;
+    color: #fffee6;
     margin-bottom: 2rem;
     font-weight: 400;
-    opacity: 0.8;
+    opacity: 0.9;
+}
+
+.start-logo {
+    max-width: 200px;
+    width: 100%;
+    height: auto;
+    margin-bottom: 1.5rem;
+    filter: brightness(0) invert(1);
 }
 
 .button-group {
@@ -92,28 +103,34 @@ body {
 }
 
 .btn-primary {
-    background: #8ec622;
-    color: #fffee6;
-    border: 2px solid #8ec622;
+    background: #fffee6;
+    color: #8ec622;
+    border: 3px solid #ffffff;
+    border-radius: 9999px;
 }
 
 .btn-primary:hover {
     background: #7ab01d;
-    border-color: #7ab01d;
+    color: #fffee6;
+    border-color: #ffffff;
 }
 
 .btn-secondary {
     background: #4daadd;
     color: #fffee6;
+    border-radius: 9999px;
     border: 2px solid #4daadd;
 }
 
 .btn-secondary:hover {
-    background: #3b9bc8;
+    background: #fffee6;
+    color: #4daadd;
     border-color: #3b9bc8;
 }
 
 .btn-small {
+    border-radius: 9999px;
+    border: 2px solid #ffffff;
     padding: 8px 16px;
     font-size: 0.9rem;
     text-transform: none;
@@ -128,14 +145,14 @@ body {
 }
 
 .status-message.success {
-    background: rgba(142, 198, 34, 0.2);
-    color: #8ec622;
-    border: 1px solid #8ec622;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fffee6;
+    border: 1px solid #ffffff;
 }
 
 .status-message.error {
-    background: rgba(219, 90, 152, 0.2);
-    color: #db5a98;
+    background: rgba(219, 90, 152, 0.3);
+    color: #fffee6;
     border: 1px solid #db5a98;
 }
 
@@ -146,8 +163,8 @@ body {
     left: 0;
     right: 0;
     padding: 15px 20px;
-    background: rgba(255, 254, 230, 0.95);
-    border-bottom: 2px solid #212121;
+    background: rgba(142, 198, 34, 0.95);
+    border-bottom: 2px solid #ffffff;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -156,13 +173,26 @@ body {
     gap: 10px;
 }
 
+.game-header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.game-logo {
+    max-height: 40px;
+    height: auto;
+    width: auto;
+    filter: brightness(0) invert(1);
+}
+
 .game-header-buttons {
     display: flex;
     gap: 10px;
 }
 
 .score-display {
-    color: #212121;
+    color: #fffee6;
     font-size: 1.2rem;
     font-weight: 600;
     display: flex;
@@ -170,7 +200,7 @@ body {
 }
 
 .timer-display {
-    color: #212121;
+    color: #fffee6;
     font-size: 1.2rem;
     font-weight: 600;
 }
@@ -265,6 +295,11 @@ body {
         font-size: 1.2rem;
     }
 
+    .start-logo {
+        max-width: 200px;
+        margin-bottom: 1rem;
+    }
+
     .btn {
         padding: 12px 24px;
         font-size: 1rem;
@@ -273,6 +308,15 @@ body {
     .game-header {
         flex-direction: column;
         padding: 10px;
+    }
+
+    .game-header-right {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .game-logo {
+        max-height: 30px;
     }
 
     .score-display {
