@@ -8,6 +8,7 @@ class FaceDetection {
         this.ctx = null;
         this.isInitialized = false;
         this.mouthOpen = false;
+        this.faceDetected = false; // true while a face is present in frame
         this.mouthPosition = { x: 0, y: 0, radius: 0 };
         this.mouthOpenThreshold = 0.02; // Threshold for mouth opening detection
         
@@ -68,10 +69,12 @@ class FaceDetection {
         this.ctx.drawImage(results.image, 0, 0, this.canvas.width, this.canvas.height);
 
         if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+            this.faceDetected = true;
             const landmarks = results.multiFaceLandmarks[0];
             this.detectMouth(landmarks);
             this.drawMouth(this.ctx, landmarks);
         } else {
+            this.faceDetected = false;
             this.mouthOpen = false;
             this.mouthPosition = { x: 0, y: 0, radius: 0 };
         }
@@ -147,6 +150,10 @@ class FaceDetection {
         return this.mouthOpen;
     }
 
+    isFaceDetected() {
+        return this.faceDetected;
+    }
+
     getMouthPosition() {
         return this.mouthPosition;
     }
@@ -157,5 +164,11 @@ class FaceDetection {
             this.canvas.height = height;
         }
     }
+}
+
+// Node-only export for unit tests. No-op in browsers (no `module`), where
+// FaceDetection stays a global from the <script> tag.
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { FaceDetection };
 }
 

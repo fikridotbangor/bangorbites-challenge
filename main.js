@@ -17,6 +17,10 @@ class Game {
         this.faceDetectionLoopId = null;
         this.lastFaceProcessTime = 0;
         this.faceProcessInterval = 1000 / 30; // ~33ms
+
+        // 3-2-1 countdown state (guards pause/settings while it's running)
+        this.countdownTimerId = null;
+        this.isCountingDown = false;
         
         this.initializeElements();
         this.attachEventListeners();
@@ -50,6 +54,8 @@ class Game {
         this.timerDisplay = document.getElementById('timer');
         this.finalScoreDisplay = document.getElementById('final-score');
         this.endHighScoreDisplay = document.getElementById('end-high-score');
+        this.countdownDisplay = document.getElementById('countdown-overlay');
+        this.faceWarning = document.getElementById('face-warning');
         
         // Audio
         this.bgMusic = document.getElementById('bg-music');
@@ -229,6 +235,7 @@ class Game {
         // restarts it on resume/replay. This also gates out the expensive send.
         if (this.currentScreen !== 'game' || !this.cameraManager.isActive || !this.faceDetection.isInitialized) {
             this.faceDetectionLoopId = null;
+            this.updateFaceIndicator(true); // hide the warning when we leave the game
             return;
         }
 
@@ -241,6 +248,8 @@ class Game {
                 console.error('Face detection error:', error);
             }
         }
+
+        this.updateFaceIndicator(this.faceDetection.isFaceDetected());
 
         this.faceDetectionLoopId = requestAnimationFrame(() => this.processFaceDetection());
     }
@@ -321,6 +330,8 @@ class Game {
     }
 
     showSettings() {
+        // Blocked during the countdown so it can't abort a half-started game.
+        if (this.isCountingDown) return;
         // Store previous screen
         this.previousScreen = this.currentScreen;
         // Load current settings to UI
@@ -377,11 +388,68 @@ class Game {
         // Show game screen
         this.showScreen('game');
 
-        // Start game loop
-        this.startGameLoop();
-
-        // Start face detection now that we're on the game screen
+        // Start face detection first so the player sees themselves and can get
+        // positioned during the countdown, before food starts falling.
         this.startFaceDetectionLoop();
+
+        // Run the 3-2-1 countdown, then kick off the game loop (spawning + timer).
+        this.runCountdown(() => this.startGameLoop());
+    }
+
+    // Displays 3 → 2 → 1 → GO! over the game area, then calls onComplete. While
+    // counting, pause/settings are blocked (see their guards) so the game can't
+    // be left in a half-started state.
+    runCountdown(onComplete) {
+        const el = this.countdownDisplay;
+        if (!el) { onComplete(); return; } // fail open if the element is missing
+
+        this.isCountingDown = true;
+        el.classList.add('active');
+
+        const steps = ['3', '2', '1', 'GO!'];
+        let i = 0;
+        const tick = () => {
+            // Bail out if we somehow left the game screen mid-countdown.
+            if (this.currentScreen !== 'game') {
+                this.clearCountdown();
+                return;
+            }
+            if (i >= steps.length) {
+                this.clearCountdown();
+                onComplete();
+                return;
+            }
+            el.textContent = steps[i];
+            // Retrigger the pop animation each tick by removing + reflowing + re-adding.
+            el.classList.remove('countdown-pop');
+            void el.offsetWidth;
+            el.classList.add('countdown-pop');
+
+            const isLast = i === steps.length - 1;
+            i++;
+            this.countdownTimerId = setTimeout(tick, isLast ? 700 : 1000);
+        };
+        tick();
+    }
+
+    clearCountdown() {
+        if (this.countdownTimerId) {
+            clearTimeout(this.countdownTimerId);
+            this.countdownTimerId = null;
+        }
+        this.isCountingDown = false;
+        if (this.countdownDisplay) {
+            this.countdownDisplay.classList.remove('active', 'countdown-pop');
+        }
+    }
+
+    // Toggle the "no face detected" warning. Only shown during active play.
+    updateFaceIndicator(faceDetected) {
+        if (!this.faceWarning) return;
+        const shouldShow = !faceDetected
+            && this.currentScreen === 'game'
+            && !this.gameLogic?.isPaused;
+        this.faceWarning.classList.toggle('active', shouldShow);
     }
 
     startGameLoop() {
@@ -422,6 +490,8 @@ class Game {
     }
 
     pauseGame() {
+        // Don't allow pausing mid-countdown — the game loop hasn't started yet.
+        if (this.isCountingDown) return;
         if (this.gameLogic) {
             this.gameLogic.pause();
         }
@@ -454,6 +524,8 @@ class Game {
     }
 
     endGame() {
+        this.clearCountdown();
+        if (this.faceWarning) this.faceWarning.classList.remove('active');
         if (this.gameLoopId) {
             cancelAnimationFrame(this.gameLoopId);
             this.gameLoopId = null;
@@ -483,6 +555,8 @@ class Game {
 
     showStartScreen() {
         this.showScreen('start');
+        this.clearCountdown();
+        if (this.faceWarning) this.faceWarning.classList.remove('active');
         if (this.gameLoopId) {
             cancelAnimationFrame(this.gameLoopId);
             this.gameLoopId = null;
