@@ -10,6 +10,13 @@ class Game {
         this.previousScreen = 'start';
         this.gameLoopId = null;
         this.lastFrameTime = Date.now();
+
+        // Face-detection loop throttling. FaceMesh.send is the expensive call;
+        // running it every rAF (~60fps) overheats booth phones/tablets over long
+        // sessions, so cap it to ~30fps. Loop only runs on the game screen.
+        this.faceDetectionLoopId = null;
+        this.lastFaceProcessTime = 0;
+        this.faceProcessInterval = 1000 / 30; // ~33ms
         
         this.initializeElements();
         this.attachEventListeners();
@@ -197,9 +204,10 @@ class Game {
             
             this.cameraStatus.textContent = '✓ Kamera berhasil diaktifkan!';
             this.cameraStatus.className = 'status-message success';
-            
-            // Start processing face detection
-            this.processFaceDetection();
+
+            // Detection loop is NOT started here — it only runs during actual
+            // gameplay (see startGame/startFaceDetectionLoop). No point burning
+            // CPU on the start screen where there's no camera preview.
         } catch (error) {
             this.cameraStatus.textContent = '✗ Gagal mengakses kamera. Pastikan izin kamera diberikan.';
             this.cameraStatus.className = 'status-message error';
@@ -207,21 +215,34 @@ class Game {
         }
     }
 
+    // Idempotent starter — safe to call on every startGame/resumeGame. Bails if
+    // the loop is already running so we never spin up two rAF chains.
+    startFaceDetectionLoop() {
+        if (this.faceDetectionLoopId) return;
+        this.lastFaceProcessTime = 0;
+        this.processFaceDetection();
+    }
+
     async processFaceDetection() {
-        if (!this.cameraManager.isActive || !this.faceDetection.isInitialized) {
-            if (this.cameraManager.isActive) {
-                requestAnimationFrame(() => this.processFaceDetection());
-            }
+        // Only detect while actually playing. currentScreen flips to 'pause'/'end'
+        // on pause/quit/game-over, which ends the loop; startFaceDetectionLoop()
+        // restarts it on resume/replay. This also gates out the expensive send.
+        if (this.currentScreen !== 'game' || !this.cameraManager.isActive || !this.faceDetection.isInitialized) {
+            this.faceDetectionLoopId = null;
             return;
         }
-        
-        try {
-            await this.faceDetection.processFrame();
-        } catch (error) {
-            console.error('Face detection error:', error);
+
+        const now = Date.now();
+        if (now - this.lastFaceProcessTime >= this.faceProcessInterval) {
+            this.lastFaceProcessTime = now;
+            try {
+                await this.faceDetection.processFrame();
+            } catch (error) {
+                console.error('Face detection error:', error);
+            }
         }
-        
-        requestAnimationFrame(() => this.processFaceDetection());
+
+        this.faceDetectionLoopId = requestAnimationFrame(() => this.processFaceDetection());
     }
 
     loadSettings() {
@@ -355,9 +376,12 @@ class Game {
         
         // Show game screen
         this.showScreen('game');
-        
+
         // Start game loop
         this.startGameLoop();
+
+        // Start face detection now that we're on the game screen
+        this.startFaceDetectionLoop();
     }
 
     startGameLoop() {
@@ -420,6 +444,8 @@ class Game {
             });
         }
         this.showScreen('game');
+        // Loop stopped itself when we entered the pause screen — restart it.
+        this.startFaceDetectionLoop();
     }
 
     quitGame() {

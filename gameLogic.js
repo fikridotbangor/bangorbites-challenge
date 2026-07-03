@@ -112,14 +112,18 @@ class GameLogic {
         }
 
         // Update food objects
-        this.foodObjects.forEach((food, index) => {
+        // Iterate in reverse so splicing an off-screen item doesn't shift the
+        // indices of items we haven't visited yet. forEach + splice skipped the
+        // element right after a removed one, leaving off-screen food alive.
+        for (let i = this.foodObjects.length - 1; i >= 0; i--) {
+            const food = this.foodObjects[i];
             food.y += food.speed * (deltaTime / 16); // Normalize speed
-            
+
             // Remove food that goes off screen
             if (food.y > this.canvas.height + 50) {
-                this.foodObjects.splice(index, 1);
+                this.foodObjects.splice(i, 1);
             }
-        });
+        }
 
         // Check collisions
         this.checkCollisions();
@@ -290,5 +294,11 @@ class GameLogic {
     saveHighScore() {
         localStorage.setItem('bangorBitesChallengeHighScore', this.highScore.toString());
     }
+}
+
+// Node-only export for unit tests. Browsers have no `module`, so this is a no-op
+// there and the game keeps using GameLogic as a global from the <script> tag.
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { GameLogic };
 }
 

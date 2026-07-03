@@ -4,10 +4,17 @@ Game berbasis web yang menggunakan kamera (webcam) untuk mendeteksi mulut pemain
 
 ## 🚀 Cara Menjalankan
 
-1. **Buka file `index.html` di browser modern** (Chrome, Edge, atau Safari)
-2. **Klik "Allow Camera"** untuk memberikan izin akses kamera
-3. **Klik "Start Game"** untuk memulai permainan
-4. **Buka mulutmu** untuk memakan objek yang muncul di layar!
+MediaPipe di-host lokal (`vendor/`) agar game jalan **offline** (mis. di booth event).
+Karena itu game **harus dijalankan lewat HTTP server lokal** — dibuka langsung via
+`file://` (double-click) tidak akan jalan, browser memblokir `fetch()` file `.wasm`/`.data` lokal.
+
+1. **Jalankan server statis** dari folder ini, contoh:
+   - `python3 -m http.server 8000`, atau
+   - `npx serve` (Node.js)
+2. **Buka `http://localhost:8000`** di browser modern (Chrome, Edge, atau Safari)
+3. **Klik "Allow Camera"** untuk memberikan izin akses kamera
+4. **Klik "Start Game"** untuk memulai permainan
+5. **Buka mulutmu** untuk memakan objek yang muncul di layar!
 
 ## 🎮 Cara Bermain
 
@@ -36,8 +43,11 @@ javascript-game/
 ├── camera.js           # Manajemen webcam
 ├── faceDetection.js    # Deteksi wajah dan mulut (MediaPipe)
 ├── gameLogic.js        # Logika game, objek, collision, scoring
+├── gameLogic.test.js   # Unit test (jalankan: node --test)
 ├── assets/
 │   └── food/           # Asset gambar makanan
+├── vendor/
+│   └── mediapipe/      # MediaPipe FaceMesh di-host lokal (offline)
 └── README.md           # Dokumentasi
 ```
 

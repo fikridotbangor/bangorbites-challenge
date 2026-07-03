@@ -41,8 +41,11 @@ class FaceDetection {
 
         // Initialize MediaPipe FaceMesh
         this.faceMesh = new FaceMeshClass({
+            // Vendored locally (vendor/mediapipe/face_mesh) for offline booth use.
+            // Requires serving over http:// — file:// blocks fetch() of the local
+            // .wasm/.data assets, so the game must run behind a local HTTP server.
             locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+                return `vendor/mediapipe/face_mesh/${file}`;
             }
         });
 
