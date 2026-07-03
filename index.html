@@ -198,8 +198,9 @@
         <source src="assets/music/eating-sound-effect-36186.mp3" type="audio/mpeg">
     </audio>
 
-    <!-- MediaPipe Face Mesh -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <!-- MediaPipe Face Mesh — vendored locally (vendor/mediapipe/face_mesh) so the
+         game loads offline at event booths. Must be served over http:// (not file://). -->
+    <script src="vendor/mediapipe/face_mesh/face_mesh.js"></script>
 
     <!-- Game Scripts -->
     <script src="camera.js"></script>
