@@ -67,18 +67,23 @@ class GameLogic {
     }
 
     async loadFoodImages() {
-        for (const asset of this.foodAssets) {
-            const img = new Image();
-            img.src = asset;
-            await new Promise((resolve) => {
-                img.onload = resolve;
-                img.onerror = () => {
-                    console.warn(`Failed to load ${asset}`);
-                    resolve();
-                };
-            });
-            this.foodImages.push(img);
+        // Load all images in parallel (was sequential — 15 round-trips one by one)
+        // and memoize on the class so replays reuse the decoded images instead of
+        // re-fetching/decoding every time startGame() builds a new GameLogic.
+        if (!GameLogic._foodImagesPromise) {
+            GameLogic._foodImagesPromise = Promise.all(
+                this.foodAssets.map(asset => new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => {
+                        console.warn(`Failed to load ${asset}`);
+                        resolve(img); // keep index parity; broken image just draws nothing
+                    };
+                    img.src = asset;
+                }))
+            );
         }
+        this.foodImages = await GameLogic._foodImagesPromise;
     }
 
     reset() {
@@ -295,6 +300,9 @@ class GameLogic {
         localStorage.setItem('bangorBitesChallengeHighScore', this.highScore.toString());
     }
 }
+
+// Shared decoded-image cache across all GameLogic instances (see loadFoodImages).
+GameLogic._foodImagesPromise = null;
 
 // Node-only export for unit tests. Browsers have no `module`, so this is a no-op
 // there and the game keeps using GameLogic as a global from the <script> tag.

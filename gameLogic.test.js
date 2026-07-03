@@ -80,3 +80,29 @@ test('food just past the threshold is removed, just before is kept', () => {
     assert.strictEqual(gl.foodObjects.length, 1, 'y=651 removed (>650), y=650 kept');
     assert.strictEqual(gl.foodObjects[0].y, 650);
 });
+
+test('food images load once and are cached/shared across instances', async () => {
+    GameLogic._foodImagesPromise = null; // reset shared cache
+    let created = 0;
+    const RealImage = global.Image;
+    // Image mock that counts src assignments and resolves onload on next microtask.
+    global.Image = class {
+        set src(_v) {
+            created++;
+            queueMicrotask(() => { if (this.onload) this.onload(); });
+        }
+    };
+
+    try {
+        const g1 = makeGame();
+        const g2 = makeGame();
+        await g1.loadFoodImages();
+        await g2.loadFoodImages();
+
+        assert.strictEqual(g1.foodImages, g2.foodImages, 'both instances share one cached array');
+        assert.strictEqual(g1.foodImages.length, g1.foodAssets.length, 'all images present, order preserved');
+        assert.strictEqual(created, g1.foodAssets.length, 'fetched once total, not per instance (no replay reload)');
+    } finally {
+        global.Image = RealImage;
+    }
+});

@@ -603,19 +603,20 @@ class Game {
             'assets/mascot/Jakrunchy.png',     // Bottom-left
             'assets/mascot/Munchie.png',       // Bottom-right
         ];
-        
-        for (const asset of mascotAssets) {
-            const img = new Image();
-            img.src = asset;
-            await new Promise((resolve) => {
-                img.onload = resolve;
+
+        // Load in parallel (was sequential). Promise.all preserves order, which
+        // matters — drawPhotoMascots() indexes this array by corner position.
+        this.mascotImages = await Promise.all(
+            mascotAssets.map(asset => new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
                 img.onerror = () => {
                     console.warn(`Failed to load mascot ${asset}`);
-                    resolve();
+                    resolve(img);
                 };
-            });
-            this.mascotImages.push(img);
-        }
+                img.src = asset;
+            }))
+        );
     }
 
     async loadLogoImage() {
