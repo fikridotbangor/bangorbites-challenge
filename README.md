@@ -55,6 +55,8 @@ javascript-game/
 
 - ✅ Deteksi mulut real-time menggunakan MediaPipe FaceMesh
 - ✅ Objek makanan muncul secara acak
+- ✅ Countdown 3-2-1 sebelum food mulai jatuh
+- ✅ Indikator peringatan saat wajah tidak terdeteksi
 - ✅ Sistem skor dan high score (disimpan di localStorage)
 - ✅ Timer 60 detik
 - ✅ UI yang colorful dan responsive

@@ -248,6 +248,74 @@ body {
     pointer-events: none;
 }
 
+/* 3-2-1 Countdown overlay (sits above the game canvas, centered) */
+.countdown-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 8rem;
+    color: #fffee6;
+    text-shadow: 0 4px 0 #212121, 0 0 30px rgba(33, 33, 33, 0.5);
+    pointer-events: none;
+    display: none;
+    line-height: 1;
+}
+
+.countdown-overlay.active {
+    display: block;
+}
+
+/* Pop animation retriggered each tick (see runCountdown) */
+.countdown-overlay.countdown-pop {
+    animation: countdown-pop 0.5s ease-out;
+}
+
+@keyframes countdown-pop {
+    0% { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+    40% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* "No face detected" warning banner, top-center of the game area */
+.face-warning {
+    position: absolute;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    background: rgba(219, 90, 152, 0.92); /* reuse the error-pink from .status-message.error */
+    color: #fffee6;
+    border: 2px solid #db5a98;
+    border-radius: 9999px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    display: none;
+}
+
+.face-warning.active {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .countdown-overlay {
+        font-size: 5rem;
+    }
+
+    .face-warning {
+        font-size: 0.8rem;
+        white-space: normal;
+        max-width: 80vw;
+        text-align: center;
+    }
+}
+
 /* End Screen */
 .score-summary {
     margin: 2rem 0;
