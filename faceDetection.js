@@ -10,7 +10,12 @@ class FaceDetection {
         this.mouthOpen = false;
         this.faceDetected = false; // true while a face is present in frame
         this.mouthPosition = { x: 0, y: 0, radius: 0 };
-        this.mouthOpenThreshold = 0.02; // Threshold for mouth opening detection
+        // Ratio of vertical lip gap to mouth width above which the mouth counts
+        // as "open" (a distance-invariant "mouth aspect ratio"). Replaces the old
+        // absolute gap threshold, which made players standing far from the camera
+        // (smaller normalized gap) unable to trigger a bite. Tunable — lower is
+        // more sensitive; may need a quick on-site calibration per camera/booth.
+        this.mouthOpenRatioThreshold = 0.3;
         
         // Mouth landmarks indices (MediaPipe FaceMesh)
         // Key points for mouth detection
@@ -111,8 +116,11 @@ class FaceDetection {
             mouthWidth * this.canvas.width
         ) * 0.6; // Scale factor for better collision detection
 
-        // Determine if mouth is open (check both vertical and horizontal opening)
-        this.mouthOpen = mouthDistance > this.mouthOpenThreshold;
+        // Determine if mouth is open using the vertical-gap / width ratio so the
+        // result is invariant to how far the player stands from the camera.
+        // Guard against a zero/degenerate width (coincident landmarks) → NaN.
+        const mouthAspectRatio = mouthWidth > 0.0001 ? (mouthDistance / mouthWidth) : 0;
+        this.mouthOpen = mouthAspectRatio > this.mouthOpenRatioThreshold;
         
         // Store mouth position (flip X coordinate to match game canvas)
         this.mouthPosition = {
