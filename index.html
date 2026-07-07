@@ -43,25 +43,34 @@
             </div>
         </div>
 
-        <!-- Game Screen -->
-        <div id="game-screen" class="screen">
-            <div class="game-header">
-                <div class="score-display">
-                    <img src="assets/logo/Bangor 2026 hitam.png" alt="Bangor Logo" class="game-logo">
-                    <span>Skor: <span id="current-score">0</span></span>
-                    <span>High Score: <span id="high-score">0</span></span>
+        <!-- Game Screen (Jawara HUD — from Figma) -->
+        <div id="game-screen" class="screen game">
+            <div class="game-bg"></div>
+            <img src="assets/home/lightning.webp" alt="" class="game-lightning" aria-hidden="true">
+
+            <div class="game-hud">
+                <div class="game-hud-left">
+                    <img src="assets/logo/Bangor 2026 hitam.png" alt="Bangor" class="game-hud-logo">
                 </div>
-                <div class="timer-display">
-                    <span>Waktu: <span id="timer">60</span>s</span>
-                </div>
-                <div class="game-header-right">
-                    <div class="game-header-buttons">
-                        <button id="game-settings-btn" class="btn btn-small">⚙️</button>
-                        <button id="pause-btn" class="btn btn-small">⏸ Pause</button>
+                <div class="game-hud-center">
+                    <!-- Bomb counter is intentionally hidden until the bomb mechanic ships -->
+                    <div class="hud-stat">
+                        <img src="assets/food-2/juragan_cheese.webp" alt="" class="hud-icon hud-burger" aria-hidden="true">
+                        <span>: <span id="current-score">0</span></span>
+                    </div>
+                    <div class="hud-timer">
+                        <img src="assets/game/timer.svg" alt="" class="hud-icon" aria-hidden="true">
+                        <span><span id="timer">60</span>s</span>
                     </div>
                 </div>
+                <div class="game-hud-right">
+                    <span class="hud-highscore">Highest score: <span id="high-score">0</span></span>
+                    <button id="pause-btn" class="hud-pause" aria-label="Pause">
+                        <img src="assets/game/pause.svg" alt="" aria-hidden="true">
+                    </button>
+                </div>
             </div>
-            
+
             <div class="game-area">
                 <canvas id="game-canvas"></canvas>
                 <video id="video" autoplay playsinline></video>
@@ -73,17 +82,30 @@
             </div>
         </div>
 
-        <!-- End Screen -->
-        <div id="end-screen" class="screen">
-            <h1 class="game-title">Game Over! 🎉</h1>
-            <div class="score-summary">
-                <p class="final-score">Skor Akhir: <span id="final-score">0</span></p>
-                <p class="high-score-text">Skor Tertinggi: <span id="end-high-score">0</span></p>
-            </div>
-            <div class="button-group">
-                <button id="photo-btn" class="btn btn-primary">📸 Ambil Foto</button>
-                <button id="replay-btn" class="btn btn-secondary">Main Lagi</button>
-                <button id="home-btn" class="btn btn-small">Kembali ke Menu</button>
+        <!-- End Screen (Win/Lose billboard — from Figma; variant set in JS) -->
+        <div id="end-screen" class="screen end win">
+            <div class="end-bg"></div>
+            <div class="end-gradient"></div>
+            <img src="assets/home/lightning.webp" alt="" class="end-lightning" aria-hidden="true">
+
+            <img src="assets/end/burger.webp" alt="" class="end-burger end-burger-tl" aria-hidden="true">
+            <img src="assets/end/burger.webp" alt="" class="end-burger end-burger-tr" aria-hidden="true">
+            <img src="assets/end/burger.webp" alt="" class="end-burger end-burger-bl" aria-hidden="true">
+            <img src="assets/end/burger.webp" alt="" class="end-burger end-burger-br" aria-hidden="true">
+
+            <div class="end-board">
+                <img src="assets/end/jawara-series.webp" alt="Jawara Series" class="end-series">
+                <div class="end-board-inner">
+                    <h1 id="end-title" class="end-title">JAWARA! 🔥</h1>
+                    <p id="end-subtitle" class="end-subtitle">Gokil! Kamu berhasil jadi juara!</p>
+                    <p class="end-score">Skor Kamu: <span id="final-score">0</span></p>
+                    <p class="end-score">Skor Tertinggi: <span id="end-high-score">0</span></p>
+                    <div class="end-buttons">
+                        <button id="replay-btn" class="end-btn end-btn-primary">Main lagi</button>
+                        <button id="home-btn" class="end-btn end-btn-tertiary">Kembali ke menu</button>
+                    </div>
+                    <button id="photo-btn" class="end-btn end-btn-photo">📸 Ambil Foto</button>
+                </div>
             </div>
         </div>
 
@@ -146,6 +168,10 @@
                     <div class="setting-item">
                         <label for="timer-slider">Timer Duration: <span id="timer-value">60</span> seconds</label>
                         <input type="range" id="timer-slider" min="30" max="120" step="10" value="60" class="slider">
+                    </div>
+                    <div class="setting-item">
+                        <label for="target-slider">Target Skor (Menang): <span id="target-value">30</span></label>
+                        <input type="range" id="target-slider" min="5" max="100" step="5" value="30" class="slider">
                     </div>
                 </div>
 

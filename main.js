@@ -54,6 +54,8 @@ class Game {
         this.timerDisplay = document.getElementById('timer');
         this.finalScoreDisplay = document.getElementById('final-score');
         this.endHighScoreDisplay = document.getElementById('end-high-score');
+        this.endTitle = document.getElementById('end-title');
+        this.endSubtitle = document.getElementById('end-subtitle');
         this.countdownDisplay = document.getElementById('countdown-overlay');
         this.faceWarning = document.getElementById('face-warning');
         
@@ -86,6 +88,8 @@ class Game {
         this.difficultySelect = document.getElementById('difficulty-select');
         this.timerSlider = document.getElementById('timer-slider');
         this.timerValue = document.getElementById('timer-value');
+        this.targetSlider = document.getElementById('target-slider');
+        this.targetValue = document.getElementById('target-value');
         
         // Initialize settings
         this.loadSettings();
@@ -189,6 +193,9 @@ class Game {
         if (this.timerSlider) {
             this.timerSlider.addEventListener('input', (e) => this.updateTimer(e.target.value));
         }
+        if (this.targetSlider) {
+            this.targetSlider.addEventListener('input', (e) => this.updateTargetScore(e.target.value));
+        }
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -263,11 +270,12 @@ class Game {
             audioEnabled: localStorage.getItem('bangorBitesAudioEnabled') !== 'false',
             volume: parseInt(localStorage.getItem('bangorBitesVolume') || '50', 10),
             difficulty: localStorage.getItem('bangorBitesDifficulty') || 'medium',
-            timerDuration: parseInt(localStorage.getItem('bangorBitesTimerDuration') || '60', 10)
+            timerDuration: parseInt(localStorage.getItem('bangorBitesTimerDuration') || '60', 10),
+            targetScore: parseInt(localStorage.getItem('bangorBitesTargetScore') || '30', 10)
         };
-        
+
         this.settings = settings;
-        
+
         // Update UI elements
         if (this.audioToggle) this.audioToggle.checked = settings.audioEnabled;
         if (this.volumeSlider) this.volumeSlider.value = settings.volume;
@@ -275,6 +283,8 @@ class Game {
         if (this.difficultySelect) this.difficultySelect.value = settings.difficulty;
         if (this.timerSlider) this.timerSlider.value = settings.timerDuration;
         if (this.timerValue) this.timerValue.textContent = settings.timerDuration;
+        if (this.targetSlider) this.targetSlider.value = settings.targetScore;
+        if (this.targetValue) this.targetValue.textContent = settings.targetScore;
     }
 
     saveSettings() {
@@ -283,6 +293,7 @@ class Game {
             localStorage.setItem('bangorBitesVolume', this.settings.volume.toString());
             localStorage.setItem('bangorBitesDifficulty', this.settings.difficulty);
             localStorage.setItem('bangorBitesTimerDuration', this.settings.timerDuration.toString());
+            localStorage.setItem('bangorBitesTargetScore', this.settings.targetScore.toString());
         }
     }
 
@@ -333,6 +344,14 @@ class Game {
         this.saveSettings();
     }
 
+    updateTargetScore(target) {
+        this.settings.targetScore = parseInt(target, 10);
+        if (this.targetValue) {
+            this.targetValue.textContent = this.settings.targetScore;
+        }
+        this.saveSettings();
+    }
+
     showSettings() {
         // Blocked during the countdown so it can't abort a half-started game.
         if (this.isCountingDown) return;
@@ -376,9 +395,10 @@ class Game {
         // Get settings
         const difficulty = this.settings?.difficulty || 'medium';
         const timerDuration = this.settings?.timerDuration || 60;
+        const targetScore = this.settings?.targetScore || 30;
 
         // Initialize game logic with settings
-        this.gameLogic = new GameLogic(this.gameCanvas, this.faceDetection, this.eatingSound, difficulty, timerDuration);
+        this.gameLogic = new GameLogic(this.gameCanvas, this.faceDetection, this.eatingSound, difficulty, timerDuration, targetScore);
         this.gameLogic.reset();
         
         // Play background music if enabled
@@ -552,9 +572,27 @@ class Game {
         if (this.gameLogic) {
             this.finalScoreDisplay.textContent = this.gameLogic.getScore();
             this.endHighScoreDisplay.textContent = this.gameLogic.getHighScore();
+            this.applyEndResult(this.gameLogic.isWin());
         }
 
         this.showScreen('end');
+    }
+
+    // Switch the end screen between the "win" (Jawara) and "lose" variants —
+    // toggles a class for colour/theme and swaps the headline + subtitle copy.
+    applyEndResult(isWin) {
+        if (this.endScreen) {
+            this.endScreen.classList.toggle('win', isWin);
+            this.endScreen.classList.toggle('lose', !isWin);
+        }
+        if (this.endTitle) {
+            this.endTitle.textContent = isWin ? 'JAWARA! 🔥' : 'Yaah, Kurang Dikit!';
+        }
+        if (this.endSubtitle) {
+            this.endSubtitle.textContent = isWin
+                ? 'Gokil! Kamu berhasil jadi juara!'
+                : 'Belum jadi jawara nih. Yuk coba lagi!';
+        }
     }
 
     showStartScreen() {

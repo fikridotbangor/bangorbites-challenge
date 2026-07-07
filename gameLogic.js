@@ -1,16 +1,17 @@
 // gameLogic.js - Game mechanics, objects, collision detection, and scoring
 
 class GameLogic {
-    constructor(canvas, faceDetection, eatingSound = null, difficulty = 'medium', gameTime = 60) {
+    constructor(canvas, faceDetection, eatingSound = null, difficulty = 'medium', gameTime = 60, targetScore = 30) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.faceDetection = faceDetection;
         this.eatingSound = eatingSound;
-        
+
         this.score = 0;
         this.highScore = this.loadHighScore();
         this.gameTime = gameTime;
         this.timeRemaining = this.gameTime;
+        this.targetScore = targetScore; // score needed to "win" (Jawara)
         this.isPaused = false;
         this.isGameOver = false;
         this.difficulty = difficulty;
@@ -284,6 +285,15 @@ class GameLogic {
 
     getTimeRemaining() {
         return Math.ceil(this.timeRemaining);
+    }
+
+    getTargetScore() {
+        return this.targetScore;
+    }
+
+    // Win ("Jawara") when the final score reaches the target, else lose.
+    isWin() {
+        return this.score >= this.targetScore;
     }
 
     setCanvasSize(width, height) {
