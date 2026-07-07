@@ -106,3 +106,19 @@ test('food images load once and are cached/shared across instances', async () =>
         global.Image = RealImage;
     }
 });
+
+test('isWin is true when the score reaches the target (win screen)', () => {
+    const gl = makeGame();
+    gl.targetScore = 30;
+    gl.score = 30;
+    assert.strictEqual(gl.isWin(), true, 'exactly at target counts as a win');
+    gl.score = 45;
+    assert.strictEqual(gl.isWin(), true, 'above target is a win');
+});
+
+test('isWin is false when the score is below the target (lose screen)', () => {
+    const gl = makeGame();
+    gl.targetScore = 30;
+    gl.score = 29;
+    assert.strictEqual(gl.isWin(), false);
+});
