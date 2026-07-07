@@ -134,7 +134,11 @@ class Game {
 
     attachEventListeners() {
         this.startBtn.addEventListener('click', () => this.startGame());
-        this.allowCameraBtn.addEventListener('click', () => this.requestCamera());
+        // Allow-camera button was removed in the home redesign — "Mulai Game"
+        // requests the camera on demand via startGame(). Guarded in case it's absent.
+        if (this.allowCameraBtn) {
+            this.allowCameraBtn.addEventListener('click', () => this.requestCamera());
+        }
         this.replayBtn.addEventListener('click', () => this.startGame());
         this.homeBtn.addEventListener('click', () => this.showStartScreen());
         this.pauseBtn.addEventListener('click', () => this.pauseGame());
