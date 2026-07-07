@@ -1188,3 +1188,256 @@ body {
     .game-hud { height: 56px; padding: 0 12px; }
     .game-hud-logo { height: 24px; }
 }
+
+/* ===== Overlay panels: Pause / Settings / Tutorial (from Figma) =====
+   Pause (6:152), Settings (24:52) and Tutorial (14:166) share one card and control
+   system. The theme colour is driven by a single --accent custom property set per
+   panel, so the Audio/Timer/Target/Difficulty block is reused verbatim in Pause and
+   Settings and just recolours itself (green vs orange). Chosen over three separate
+   stylesheets so the shared control block can't drift between the two panels. */
+.panel-card {
+    --accent: #8ec622;
+    position: relative;
+    z-index: 1;
+    background: #fffffd;
+    border-radius: 20px;
+    padding: clamp(24px, 4vw, 40px);
+    width: min(600px, 92vw);
+    max-height: 92vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(18px, 3vh, 40px);
+    font-family: 'Bangor Sans Two', 'Poppins', sans-serif;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+.pause-panel { --accent: #8ec622; }
+.settings-panel { --accent: #ff8222; }
+.tutorial-panel { --accent: #4daadd; }
+
+.panel-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.panel-head-icon { width: 60px; height: 60px; display: block; }
+.panel-title {
+    font-family: 'Bangor Sans Two', 'Poppins', sans-serif;
+    font-weight: 400;
+    font-size: clamp(2rem, 5vw, 3rem);
+    line-height: 1;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.panel-divider {
+    width: 100%;
+    height: 1px;
+    background: #e9e9e9;
+    flex-shrink: 0;
+}
+
+.panel-controls {
+    width: 100%;
+    max-width: 511px;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(20px, 3vh, 44px);
+}
+.panel-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+.panel-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+.panel-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: clamp(1.25rem, 3.2vw, 2rem);
+    color: #212121;
+    white-space: nowrap;
+}
+/* Row icons are 32x32 Figma SVGs exported preserveAspectRatio="none" — pin both
+   dimensions so they don't stretch (same fix as the HUD timer icon). */
+.panel-icon { width: 28px; height: 28px; display: block; flex-shrink: 0; }
+.panel-icon-emoji {
+    font-size: 24px;
+    line-height: 28px;
+    text-align: center;
+}
+.panel-value {
+    font-size: clamp(1rem, 2.4vw, 1.5rem);
+    color: #6a6a6a;
+    white-space: nowrap;
+}
+
+/* Range slider: accent fill up to --fill, grey track after. --fill is set from JS
+   (syncSettingsUI) as a percentage so both panel copies stay visually in sync. */
+.panel-slider {
+    --fill: 50%;
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 12px;
+    border-radius: 100px;
+    background: linear-gradient(to right,
+        var(--accent) 0 var(--fill), #e9e9e9 var(--fill) 100%);
+    outline: none;
+    cursor: pointer;
+}
+.panel-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid #fffffd;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+}
+.panel-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid #fffffd;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+}
+
+/* Audio on/off toggle */
+.panel-toggle { position: relative; display: inline-block; cursor: pointer; }
+.panel-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.panel-toggle-track {
+    display: block;
+    width: 50px;
+    height: 28px;
+    background: #cbcbcb;
+    border-radius: 100px;
+    transition: background 0.2s ease;
+}
+.panel-toggle-track::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    background: #fffffd;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+}
+.panel-toggle input:checked + .panel-toggle-track { background: var(--accent); }
+.panel-toggle input:checked + .panel-toggle-track::before { transform: translateX(22px); }
+
+/* Custom difficulty dropdown (Figma 16:508) */
+.panel-dropdown { position: relative; width: 100%; }
+.panel-dropdown-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px 10px 32px;
+    border: 1px solid #e9e9e9;
+    border-radius: 10px;
+    background: #fffffd;
+    cursor: pointer;
+    font-family: inherit;
+}
+.panel-dropdown-value { font-size: clamp(1rem, 2.4vw, 1.5rem); color: #6a6a6a; }
+.panel-dropdown-caret { width: 24px; height: 24px; display: block; transition: transform 0.2s ease; }
+.panel-dropdown.open .panel-dropdown-caret { transform: rotate(180deg); }
+.panel-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 100%;
+    background: #fffffd;
+    border: 1px solid #bababa;
+    border-radius: 10px;
+    list-style: none;
+    padding: 8px 0;
+    margin: 0;
+    z-index: 20;
+    display: none;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+}
+.panel-dropdown.open .panel-dropdown-menu { display: block; }
+.panel-dropdown-menu li {
+    padding: 10px 32px;
+    font-size: clamp(1rem, 2.4vw, 1.5rem);
+    color: #6a6a6a;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.panel-dropdown-menu li:hover,
+.panel-dropdown-menu li[aria-selected="true"] {
+    background: #f2f2ec;
+    color: #212121;
+}
+
+/* Panel buttons (Resume/Quit, Save changes, Got it/Main sekarang) */
+.panel-buttons {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 511px;
+}
+.panel-btn {
+    flex: 1;
+    font-family: 'Bangor Sans Two', 'Poppins', sans-serif;
+    font-size: clamp(1rem, 2.4vw, 1.5rem);
+    font-weight: 400;
+    padding: 10px 40px;
+    border-radius: 100px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    white-space: nowrap;
+}
+.panel-btn:hover { transform: translateY(-2px); }
+.panel-btn:active { transform: translateY(0); }
+.panel-btn-primary { background: var(--accent); color: #fffee6; }
+.panel-btn-outline { background: #fffffd; color: var(--accent); border-color: var(--accent); }
+.panel-btn-block { flex: 1 1 100%; }
+
+/* Tutorial-specific content (blue) */
+.tutorial-lead {
+    align-self: stretch;
+    font-size: clamp(1.1rem, 2.6vw, 1.5rem);
+    color: #4d4d4d;
+    text-align: left;
+    line-height: 1.3;
+}
+.tutorial-points {
+    align-self: stretch;
+    list-style: disc;
+    padding-left: 36px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.tutorial-points li {
+    font-size: clamp(1rem, 2.4vw, 1.5rem);
+    color: #6a6a6a;
+    line-height: 1.4;
+    text-align: left;
+}
+
+@media (max-width: 768px) {
+    .panel-buttons { flex-direction: column; }
+    .panel-btn-block { flex: 1 1 auto; }
+    .panel-label { font-size: clamp(1.1rem, 5vw, 1.6rem); }
+}
