@@ -72,6 +72,7 @@ class Game {
         this.tutorialBtn = document.getElementById('tutorial-btn');
         this.settingsCloseBtn = document.getElementById('settings-close-btn');
         this.tutorialCloseBtn = document.getElementById('tutorial-close-btn');
+        this.tutorialStartBtn = document.getElementById('tutorial-start-btn');
         
         // Photo Screen Elements
         this.photoScreen = document.getElementById('photo-screen');
@@ -81,16 +82,10 @@ class Game {
         this.sharePhotoBtn = document.getElementById('share-photo-btn');
         this.photoCloseBtn = document.getElementById('photo-close-btn');
         
-        // Settings Controls
-        this.audioToggle = document.getElementById('audio-toggle');
-        this.volumeSlider = document.getElementById('volume-slider');
-        this.volumeValue = document.getElementById('volume-value');
-        this.difficultySelect = document.getElementById('difficulty-select');
-        this.timerSlider = document.getElementById('timer-slider');
-        this.timerValue = document.getElementById('timer-value');
-        this.targetSlider = document.getElementById('target-slider');
-        this.targetValue = document.getElementById('target-value');
-        
+        // Settings controls are now data-attribute driven ([data-setting] /
+        // [data-display] / [data-dropdown]) so the Pause and Settings panels can
+        // share one control block and stay in sync. See bindSettingControls().
+
         // Initialize settings
         this.loadSettings();
         this.applySettings();
@@ -165,6 +160,10 @@ class Game {
         if (this.tutorialCloseBtn) {
             this.tutorialCloseBtn.addEventListener('click', () => this.closeTutorial());
         }
+        // "Main sekarang" — start the game straight from the tutorial (Figma 14:166).
+        if (this.tutorialStartBtn) {
+            this.tutorialStartBtn.addEventListener('click', () => this.startGame());
+        }
         
         // Photo screen buttons
         if (this.photoBtn) {
@@ -180,23 +179,9 @@ class Game {
             this.photoCloseBtn.addEventListener('click', () => this.closePhotoScreen());
         }
         
-        // Settings controls
-        if (this.audioToggle) {
-            this.audioToggle.addEventListener('change', (e) => this.updateAudioEnabled(e.target.checked));
-        }
-        if (this.volumeSlider) {
-            this.volumeSlider.addEventListener('input', (e) => this.updateVolume(e.target.value));
-        }
-        if (this.difficultySelect) {
-            this.difficultySelect.addEventListener('change', (e) => this.updateDifficulty(e.target.value));
-        }
-        if (this.timerSlider) {
-            this.timerSlider.addEventListener('input', (e) => this.updateTimer(e.target.value));
-        }
-        if (this.targetSlider) {
-            this.targetSlider.addEventListener('input', (e) => this.updateTargetScore(e.target.value));
-        }
-        
+        // Settings controls (shared by the Settings + Pause panels)
+        this.bindSettingControls();
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' || e.key === ' ') {
@@ -276,15 +261,101 @@ class Game {
 
         this.settings = settings;
 
-        // Update UI elements
-        if (this.audioToggle) this.audioToggle.checked = settings.audioEnabled;
-        if (this.volumeSlider) this.volumeSlider.value = settings.volume;
-        if (this.volumeValue) this.volumeValue.textContent = settings.volume;
-        if (this.difficultySelect) this.difficultySelect.value = settings.difficulty;
-        if (this.timerSlider) this.timerSlider.value = settings.timerDuration;
-        if (this.timerValue) this.timerValue.textContent = settings.timerDuration;
-        if (this.targetSlider) this.targetSlider.value = settings.targetScore;
-        if (this.targetValue) this.targetValue.textContent = settings.targetScore;
+        // Push into every [data-setting] control across the Settings + Pause panels.
+        this.syncSettingsUI();
+    }
+
+    // Wire the shared settings controls. Both the Settings and Pause panels carry a
+    // copy of the Audio/Timer/Target/Difficulty block (same data-setting keys), so a
+    // change to one panel is mirrored to the other via syncSettingsUI().
+    bindSettingControls() {
+        document.querySelectorAll('[data-setting]').forEach(el => {
+            // Checkboxes fire 'change'; range sliders fire 'input' for live drag.
+            const evt = el.type === 'checkbox' ? 'change' : 'input';
+            el.addEventListener(evt, () => this.onSettingChange(el));
+        });
+        document.querySelectorAll('[data-dropdown="difficulty"]').forEach(dd => this.initDifficultyDropdown(dd));
+        // Click outside closes any open dropdown.
+        document.addEventListener('click', (e) => {
+            document.querySelectorAll('.panel-dropdown.open').forEach(dd => {
+                if (!dd.contains(e.target)) {
+                    dd.classList.remove('open');
+                    const t = dd.querySelector('.panel-dropdown-toggle');
+                    if (t) t.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
+    }
+
+    onSettingChange(el) {
+        const key = el.dataset.setting;
+        const value = el.type === 'checkbox' ? el.checked : parseInt(el.value, 10);
+        this.settings[key] = value;
+        this.syncSettingsUI();
+        this.applySettings();
+        this.saveSettings();
+    }
+
+    // Custom difficulty dropdown (Figma 16:508) — replaces the native <select> so it
+    // can be styled to match. Selecting an option updates settings.difficulty.
+    initDifficultyDropdown(dd) {
+        const toggle = dd.querySelector('.panel-dropdown-toggle');
+        if (toggle) {
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const willOpen = !dd.classList.contains('open');
+                document.querySelectorAll('.panel-dropdown.open').forEach(o => {
+                    o.classList.remove('open');
+                    const t = o.querySelector('.panel-dropdown-toggle');
+                    if (t) t.setAttribute('aria-expanded', 'false');
+                });
+                dd.classList.toggle('open', willOpen);
+                toggle.setAttribute('aria-expanded', String(willOpen));
+            });
+        }
+        dd.querySelectorAll('.panel-dropdown-menu li').forEach(li => {
+            li.addEventListener('click', () => {
+                this.settings.difficulty = li.dataset.value;
+                dd.classList.remove('open');
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+                this.syncSettingsUI();
+                this.saveSettings();
+            });
+        });
+    }
+
+    // Reflect the current settings into every control instance (sliders, toggles,
+    // value labels, dropdown labels) so both panels always agree.
+    syncSettingsUI() {
+        if (!this.settings) return;
+        const s = this.settings;
+
+        document.querySelectorAll('[data-setting]').forEach(el => {
+            const key = el.dataset.setting;
+            if (el.type === 'checkbox') {
+                el.checked = !!s[key];
+            } else {
+                el.value = s[key];
+                // Paint the filled portion of the range track (0–100%).
+                const min = parseFloat(el.min) || 0;
+                const max = parseFloat(el.max) || 100;
+                const pct = max > min ? ((s[key] - min) / (max - min)) * 100 : 0;
+                el.style.setProperty('--fill', pct + '%');
+            }
+        });
+
+        document.querySelectorAll('[data-display]').forEach(el => {
+            el.textContent = s[el.dataset.display];
+        });
+
+        document.querySelectorAll('[data-dropdown="difficulty"]').forEach(dd => {
+            const valueEl = dd.querySelector('.panel-dropdown-value');
+            dd.querySelectorAll('.panel-dropdown-menu li').forEach(li => {
+                const selected = li.dataset.value === s.difficulty;
+                li.setAttribute('aria-selected', String(selected));
+                if (selected && valueEl) valueEl.textContent = li.textContent;
+            });
+        });
     }
 
     saveSettings() {
@@ -314,42 +385,6 @@ class Game {
             this.eatingSound.volume = volume * 0.6; // Eating sound at 60% of volume setting
             this.eatingSound.muted = !this.settings.audioEnabled;
         }
-    }
-
-    updateAudioEnabled(enabled) {
-        this.settings.audioEnabled = enabled;
-        this.applySettings();
-        this.saveSettings();
-    }
-
-    updateVolume(volume) {
-        this.settings.volume = parseInt(volume, 10);
-        if (this.volumeValue) {
-            this.volumeValue.textContent = this.settings.volume;
-        }
-        this.applySettings();
-        this.saveSettings();
-    }
-
-    updateDifficulty(difficulty) {
-        this.settings.difficulty = difficulty;
-        this.saveSettings();
-    }
-
-    updateTimer(duration) {
-        this.settings.timerDuration = parseInt(duration, 10);
-        if (this.timerValue) {
-            this.timerValue.textContent = this.settings.timerDuration;
-        }
-        this.saveSettings();
-    }
-
-    updateTargetScore(target) {
-        this.settings.targetScore = parseInt(target, 10);
-        if (this.targetValue) {
-            this.targetValue.textContent = this.settings.targetScore;
-        }
-        this.saveSettings();
     }
 
     showSettings() {
