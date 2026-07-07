@@ -11,20 +11,36 @@
 </head>
 <body>
     <div id="game-container">
-        <!-- Start Screen -->
-        <div id="start-screen" class="screen active">
-            <img src="assets/logo/Bangor 2026 hitam.png" alt="Bangor Logo" class="start-logo">
-            <h1 class="game-title">🍔 Bangor Bites Challenge 🍔</h1>
-            <p class="game-subtitle">Buka mulutmu untuk memakan objek!</p>
-            <div class="button-group">
-                <button id="start-btn" class="btn btn-primary">Start Game</button>
-                <button id="allow-camera-btn" class="btn btn-secondary">Allow Camera</button>
+        <!-- Start Screen (Jawara Cheese Challenge home — from Figma) -->
+        <div id="start-screen" class="screen active home">
+            <!-- Background layers -->
+            <div class="home-bg"></div>
+            <div class="home-gradient"></div>
+            <img src="assets/home/lightning.webp" alt="" class="home-lightning" aria-hidden="true">
+
+            <!-- Settings (gear), top-right -->
+            <button id="settings-btn" class="home-gear" aria-label="Settings">
+                <img src="assets/home/gear.svg" alt="" aria-hidden="true">
+            </button>
+
+            <!-- Foreground -->
+            <div class="home-content">
+                <div class="home-logo-wrap">
+                    <img src="assets/logo/Bangor 2026 hijau.png" alt="" class="home-bangor" aria-hidden="true">
+                    <img src="assets/home/logo-jawara.webp" alt="Bangor Jawara Cheese" class="home-logo">
+                    <span class="home-challenge">BITES CHALLENGE</span>
+                </div>
+                <div class="home-hero-wrap">
+                    <img src="assets/home/burger-hero.webp" alt="" class="home-burger" aria-hidden="true">
+                    <img src="assets/home/badge-baru.png" alt="Baru" class="home-baru">
+                </div>
+                <div class="home-buttons">
+                    <button id="start-btn" class="home-btn home-btn-primary">Mulai Game</button>
+                    <button id="tutorial-btn" class="home-btn home-btn-tertiary">Tutorial</button>
+                </div>
+                <p class="home-tagline">GAHAR DARI GIGITAN PERTAMA</p>
+                <div id="camera-status" class="status-message home-status"></div>
             </div>
-            <div class="button-group" style="margin-top: 1rem;">
-                <button id="settings-btn" class="btn btn-small">⚙️ Settings</button>
-                <button id="tutorial-btn" class="btn btn-small">❓ Tutorial</button>
-            </div>
-            <div id="camera-status" class="status-message"></div>
         </div>
 
         <!-- Game Screen -->

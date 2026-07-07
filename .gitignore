@@ -1,0 +1,4 @@
+# Only the VVDS weight actually used by the site is tracked; the rest of the
+# family (58 unused .otf files, ~2.4MB) stays out of git.
+assets/fonts/VVDS Fifties 2/*
+!assets/fonts/VVDS Fifties 2/VVDS-Fifties-Cond-Bold-Italic.otf

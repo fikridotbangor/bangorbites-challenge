@@ -156,6 +156,267 @@ body {
     border: 1px solid #db5a98;
 }
 
+/* ===== Home / Start Screen (Jawara Cheese Challenge — from Figma) ===== */
+/* Brand fonts are bundled: "Bangor Sans Two" (buttons, tagline) and
+   "VVDS Fifties" Cond Bold Italic (the CHALLENGE text, per the Figma D3 style). */
+@font-face {
+    font-family: 'Bangor Sans Two';
+    src: url('assets/fonts/Bangor Sans Two.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'VVDS Fifties';
+    src: url('assets/fonts/VVDS Fifties 2/VVDS-Fifties-Cond-Bold-Italic.otf') format('opentype');
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+}
+
+#start-screen.home {
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+    justify-content: flex-start;
+}
+
+.home-bg {
+    position: absolute;
+    inset: 0;
+    background: url('assets/home/bg-stadium.webp') center center / cover no-repeat;
+    z-index: 0;
+}
+
+/* Green fade from the top, matching the Figma gradient overlay */
+.home-gradient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 72%;
+    background: linear-gradient(to bottom, #8ec622 0%, rgba(142, 198, 34, 0) 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.home-lightning {
+    position: absolute;
+    top: -58%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 118%;
+    max-width: none;
+    mix-blend-mode: plus-lighter; /* additive glow, per Figma */
+    pointer-events: none;
+    z-index: 2;
+    animation: homeLightningIn 1.3s ease-out both;
+}
+
+.home-content {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5vh 20px 4vh;
+}
+
+.home-logo-wrap {
+    position: relative;
+    margin-top: 1vh;
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+}
+
+.home-logo {
+    /* Sized to 0.84× the burger to match the Figma ratio (logo 550px : burger
+       652px). Height-governed (vh) like the burger so the ratio holds as the
+       composition scales, and it still fits at 100% zoom on short viewports. */
+    width: min(555px, 76vw, 59vh);
+    height: auto;
+    display: block;
+    animation: homeFadeIn 0.6s ease-out both;
+}
+
+/* "Bangor" cursive wordmark, sitting above-left of the JAWARA CHEESE logo */
+.home-bangor {
+    position: absolute;
+    top: 10%;
+    left: -20%;
+    width: 40%;
+    height: auto;
+    transform: rotate(-9deg);
+    z-index: 4;
+    pointer-events: none;
+    animation: homeFadeIn 0.6s ease-out both;
+    animation-delay: 0.35s;
+}
+
+/* Live "CHALLENGE" text overlaying the lower-right of the logo */
+.home-challenge {
+    position: absolute;
+    right: -16%;
+    bottom: 10%;
+    transform: rotate(-8deg);
+    font-family: 'VVDS Fifties', 'Poppins', sans-serif;
+    font-style: italic;
+    font-weight: 700; /* matches the bundled Cond Bold Italic face — avoids faux-bold */
+    /* Figma D3 size is 56px on a 1024-tall frame (≈5.5vh); vh-governed so it
+       scales with the (vh-governed) logo/burger instead of drifting on short screens. */
+    font-size: clamp(1.4rem, 5.5vh, 3.5rem);
+    line-height: 1;
+    color: #fffffd;
+    text-shadow: -4px 6px 0 #4e6d13;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    animation: homeChallengePop 0.6s ease-out both;
+    animation-delay: 0.55s;
+}
+
+.home-hero-wrap {
+    position: relative;
+    margin-top: -18vh; /* pull the burger up under the logo (vh-based, matches sizing) */
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+}
+
+.home-burger {
+    /* Height-governed (59vh ≈ 42vh tall for its 1.41 ratio) so the burger never
+       overflows the viewport — this was the element forcing an 80% zoom. */
+    width: min(660px, 90vw, 70vh);
+    height: auto;
+    display: block;
+    animation: homeFadeIn 0.7s ease-out both;
+}
+
+.home-baru {
+    position: absolute;
+    left: -6%;
+    top: 48%;
+    width: clamp(45px, 6vw, 100px);
+    height: auto;
+    transform: rotate(-8.5deg);
+}
+
+.home-buttons {
+    margin-top: 3vh; /* sits below the burger, leaving the field visible (as in Figma) */
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: homeFadeUp 0.5s ease-out both;
+    animation-delay: 1s;
+}
+
+.home-btn {
+    font-family: 'Bangor Sans Two', 'Poppins', sans-serif;
+    font-size: clamp(1rem, 2.8vw, 1.5rem);
+    font-weight: 600;
+    padding: 5px 50px;
+    border-radius: 100px;
+    cursor: pointer;
+    width: clamp(180px, 50vw, 400px);
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.home-btn:hover { transform: translateY(-2px); }
+.home-btn:active { transform: translateY(0); }
+
+.home-btn-primary {
+    background: #8ec622;
+    color: #fffee6;
+    border: 2px solid #8ec622;
+}
+.home-btn-primary:hover { background: #7ab01d; border-color: #7ab01d; }
+
+.home-btn-tertiary {
+    background: #fffffd;
+    color: #8ec622;
+    border: 2px solid #8ec622;
+}
+.home-btn-tertiary:hover { background: #f2f7e4; }
+
+.home-tagline {
+    margin-top: 1.4rem;
+    font-family: 'Bangor Sans Two', 'Poppins', sans-serif;
+    font-size: clamp(1rem, 2vw, 2rem);
+    color: #fffee6;
+    text-align: center;
+    animation: homeFadeUp 0.5s ease-out both;
+    animation-delay: 1.1s;
+}
+
+.home-gear {
+    position: absolute;
+    top: clamp(16px, 3vh, 41px);
+    right: clamp(16px, 3vw, 41px);
+    width: 60px;
+    height: 60px;
+    border: none;
+    border-radius: 9999px;
+    background: #fffffd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    filter: drop-shadow(-4px 4px 5px rgba(0, 0, 0, 0.2));
+    transition: transform 0.2s ease;
+}
+.home-gear:hover { transform: rotate(30deg); }
+.home-gear img { width: 37px; height: 37px; display: block; }
+
+.home-status {
+    margin-top: 0.6rem;
+    background: transparent;
+}
+
+@media (max-width: 768px) {
+    .home-buttons { flex-direction: column; gap: 12px; }
+    .home-btn { width: min(70vw, 212px); }
+    .home-challenge { font-size: clamp(1.2rem, 6vw, 2.2rem); }
+    .home-gear { width: 48px; height: 48px; }
+    .home-gear img { width: 28px; height: 28px; }
+}
+
+/* Entrance animation (one-shot, ~1.5s) — mirrors the Figma timeline: logo/burger
+   are static, accents/text/buttons fade in staggered, lightning drifts up in scale. */
+@keyframes homeFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes homeFadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes homeChallengePop {
+    0% { opacity: 0; transform: rotate(-8deg) scale(0.6); }
+    100% { opacity: 1; transform: rotate(-8deg) scale(1); }
+}
+
+@keyframes homeLightningIn {
+    from { opacity: 0; transform: translateX(-50%) scale(1); }
+    to { opacity: 1; transform: translateX(-50%) scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-logo,
+    .home-burger,
+    .home-challenge,
+    .home-buttons,
+    .home-tagline,
+    .home-lightning {
+        animation: none;
+    }
+}
+
 /* Game Screen */
 .game-header {
     position: absolute;

@@ -12,9 +12,12 @@ Karena itu game **harus dijalankan lewat HTTP server lokal** — dibuka langsung
    - `python3 -m http.server 8000`, atau
    - `npx serve` (Node.js)
 2. **Buka `http://localhost:8000`** di browser modern (Chrome, Edge, atau Safari)
-3. **Klik "Allow Camera"** untuk memberikan izin akses kamera
-4. **Klik "Start Game"** untuk memulai permainan
-5. **Buka mulutmu** untuk memakan objek yang muncul di layar!
+3. **Klik "Mulai Game"** — browser akan meminta izin kamera, izinkan
+4. **Buka mulutmu** untuk memakan objek yang muncul di layar!
+
+> Catatan: font brand ("Bangor Sans Two", "VVDS Fifties") belum di-bundle dan
+> sementara fallback ke Poppins. Taruh file font di `assets/fonts/` lalu tambah
+> `@font-face` di `style.css` untuk fidelity penuh.
 
 ## 🎮 Cara Bermain
 
