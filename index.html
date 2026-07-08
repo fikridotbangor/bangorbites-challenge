@@ -79,6 +79,12 @@
                 <canvas id="game-canvas"></canvas>
                 <video id="video" autoplay playsinline></video>
                 <canvas id="face-canvas"></canvas>
+                <!-- Explosion FX: the green-screen clip is chroma-keyed frame-by-frame
+                     onto this overlay canvas at the obstacle's position (see main.js). -->
+                <canvas id="explosion-canvas"></canvas>
+                <video id="explosion-video" class="fx-video" muted playsinline preload="auto">
+                    <source src="assets/effects/explode-effect.mp4" type="video/mp4">
+                </video>
                 <!-- 3-2-1 countdown shown before food starts falling -->
                 <div id="countdown-overlay" class="countdown-overlay"></div>
                 <!-- Warning banner shown during play when no face is detected -->
@@ -351,6 +357,7 @@
     <script src="camera.js"></script>
     <script src="faceDetection.js"></script>
     <script src="gameLogic.js"></script>
+    <script src="chromaKey.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

@@ -46,6 +46,13 @@ class Game {
         this.video = document.getElementById('video');
         this.gameCanvas = document.getElementById('game-canvas');
         this.faceCanvas = document.getElementById('face-canvas');
+
+        // Explosion FX (chroma-keyed green-screen clip drawn on obstacle hit)
+        this.explosionCanvas = document.getElementById('explosion-canvas');
+        this.explosionCtx = this.explosionCanvas ? this.explosionCanvas.getContext('2d') : null;
+        this.explosionVideo = document.getElementById('explosion-video');
+        this._explosion = null;      // { x, y, box } current burst, or null
+        this._explosionRAF = null;   // rAF id for the FX draw loop
         
         // Status and Score displays
         this.cameraStatus = document.getElementById('camera-status');
@@ -127,7 +134,15 @@ class Game {
         this.faceCanvas.style.height = maxHeight + 'px';
         this.gameCanvas.style.width = maxWidth + 'px';
         this.gameCanvas.style.height = maxHeight + 'px';
-        
+
+        // Keep the explosion overlay 1:1 with the game canvas so hit coords line up.
+        if (this.explosionCanvas) {
+            this.explosionCanvas.width = maxWidth;
+            this.explosionCanvas.height = maxHeight;
+            this.explosionCanvas.style.width = maxWidth + 'px';
+            this.explosionCanvas.style.height = maxHeight + 'px';
+        }
+
         if (this.gameLogic) {
             this.gameLogic.setCanvasSize(maxWidth, maxHeight);
         }
@@ -441,6 +456,9 @@ class Game {
         this.gameLogic = new GameLogic(this.gameCanvas, this.faceDetection, this.eatingSound, difficulty, timerDuration, targetScore, lives);
         this.gameLogic.reset();
         this._prevLives = lives; // baseline for the HUD damage-flash (see updateGameUI)
+        // Play the explosion FX at the obstacle's spot whenever one is eaten.
+        this.gameLogic.onObstacleHit = (x, y, size) => this.playExplosion(x, y, size);
+        this.stopExplosion(); // clear any leftover burst from a previous round
         
         // Play background music if enabled
         if (this.bgMusic && this.settings?.audioEnabled) {
@@ -572,6 +590,93 @@ class Game {
         this.livesStat.classList.add('hud-damage');
     }
 
+    // Play the green-screen explosion clip at (x, y) in game-canvas coords, scaled
+    // to the obstacle size. Restarting an in-flight burst just moves it and rewinds.
+    playExplosion(x, y, obstacleSize) {
+        const v = this.explosionVideo;
+        if (!v || !this.explosionCtx) return;
+
+        const box = Math.max(140, Math.min(300, (obstacleSize || 80) * 2.6));
+        this._explosion = { x, y, box, start: performance.now() };
+
+        try { v.currentTime = 0; } catch (e) { /* not seekable yet */ }
+        const p = v.play();
+        if (p && p.catch) p.catch(() => { /* autoplay reject — muted should allow it */ });
+
+        if (!this._explosionRAF) {
+            this._renderExplosion();
+        }
+    }
+
+    _renderExplosion() {
+        const v = this.explosionVideo;
+        const ctx = this.explosionCtx;
+        const ex = this._explosion;
+        if (!v || !ctx || !ex) { this._stopExplosionRAF(); return; }
+
+        // Stop when the clip finishes, we leave the game screen, or as a safety
+        // net if playback never started (autoplay blocked) so the loop can't leak.
+        const maxMs = ((v.duration || 2.5) * 1000) + 400;
+        if (v.ended || this.currentScreen !== 'game' || (performance.now() - ex.start) > maxMs) {
+            this._clearExplosionCanvas();
+            this._explosion = null;
+            this._stopExplosionRAF();
+            return;
+        }
+
+        const vw = v.videoWidth || 852;
+        const vh = v.videoHeight || 480;
+        const spriteW = Math.round(ex.box);
+        const spriteH = Math.round(ex.box * (vh / vw)); // preserve clip aspect ratio
+
+        // Offscreen buffer at sprite resolution keeps the per-pixel key cheap.
+        let off = this._exOffscreen;
+        if (!off) { off = this._exOffscreen = document.createElement('canvas'); }
+        if (off.width !== spriteW || off.height !== spriteH) {
+            off.width = spriteW;
+            off.height = spriteH;
+        }
+        const octx = this._exOffCtx ||
+            (this._exOffCtx = off.getContext('2d', { willReadFrequently: true }));
+
+        octx.clearRect(0, 0, off.width, off.height);
+        try {
+            octx.drawImage(v, 0, 0, off.width, off.height);
+            const img = octx.getImageData(0, 0, off.width, off.height);
+            chromaKeyGreen(img.data);
+            octx.putImageData(img, 0, 0);
+        } catch (e) {
+            // Frame not ready this tick — skip keying, try again next frame.
+        }
+
+        ctx.clearRect(0, 0, this.explosionCanvas.width, this.explosionCanvas.height);
+        ctx.drawImage(off, ex.x - off.width / 2, ex.y - off.height / 2);
+
+        this._explosionRAF = requestAnimationFrame(() => this._renderExplosion());
+    }
+
+    _clearExplosionCanvas() {
+        if (this.explosionCtx && this.explosionCanvas) {
+            this.explosionCtx.clearRect(0, 0, this.explosionCanvas.width, this.explosionCanvas.height);
+        }
+    }
+
+    _stopExplosionRAF() {
+        if (this._explosionRAF) {
+            cancelAnimationFrame(this._explosionRAF);
+            this._explosionRAF = null;
+        }
+    }
+
+    // Halt + clear any explosion (called on pause/quit/game-over/start).
+    stopExplosion() {
+        const v = this.explosionVideo;
+        if (v) { try { v.pause(); v.currentTime = 0; } catch (e) { /* ignore */ } }
+        this._explosion = null;
+        this._stopExplosionRAF();
+        this._clearExplosionCanvas();
+    }
+
     pauseGame() {
         // Don't allow pausing mid-countdown — the game loop hasn't started yet.
         if (this.isCountingDown) return;
@@ -582,6 +687,7 @@ class Game {
         if (this.bgMusic && !this.bgMusic.paused) {
             this.bgMusic.pause();
         }
+        this.stopExplosion();
         this.previousScreen = 'game';
         this.showScreen('pause');
     }
@@ -608,6 +714,7 @@ class Game {
 
     endGame() {
         this.clearCountdown();
+        this.stopExplosion();
         if (this.faceWarning) this.faceWarning.classList.remove('active');
         if (this.gameLoopId) {
             cancelAnimationFrame(this.gameLoopId);
@@ -657,6 +764,7 @@ class Game {
     showStartScreen() {
         this.showScreen('start');
         this.clearCountdown();
+        this.stopExplosion();
         if (this.faceWarning) this.faceWarning.classList.remove('active');
         if (this.gameLoopId) {
             cancelAnimationFrame(this.gameLoopId);

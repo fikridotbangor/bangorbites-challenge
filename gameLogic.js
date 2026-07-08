@@ -253,8 +253,10 @@ class GameLogic {
             if (distance < collisionRadius) {
                 if (food.type === 'obstacle') {
                     // Ate an obstacle (Willgozhead) — remove it and lose a life.
+                    // Pass the obstacle centre so the effect layer can place the
+                    // explosion where it was eaten.
                     this.foodObjects.splice(i, 1);
-                    this.loseLife();
+                    this.loseLife(foodCenterX, foodCenterY, food.width);
                 } else {
                     // Food eaten!
                     this.eatFood(i);
@@ -265,9 +267,9 @@ class GameLogic {
         }
     }
 
-    loseLife() {
+    loseLife(x, y, size) {
         this.lives--;
-        this.onObstacleHit();
+        this.onObstacleHit(x, y, size);
         if (this.lives <= 0) {
             this.lives = 0;
             this.outOfLives = true;
@@ -276,9 +278,11 @@ class GameLogic {
         }
     }
 
-    // Feedback hook for eating an obstacle (main.js flashes the HUD hearts).
-    // Kept separate from onFoodEaten so the two never share a sound/effect.
-    onObstacleHit() {
+    // Feedback hook for eating an obstacle. main.js overrides this to flash the
+    // HUD hearts and play the explosion effect at (x, y) (obstacle centre, in
+    // game-canvas coords; size = obstacle width). Kept separate from onFoodEaten
+    // so the two never share a sound/effect.
+    onObstacleHit(x, y, size) {
     }
 
     eatFood(index) {
