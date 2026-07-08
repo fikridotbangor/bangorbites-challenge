@@ -269,8 +269,13 @@ class GameLogic {
 
     loseLife(x, y, size) {
         this.lives--;
-        this.onObstacleHit(x, y, size);
-        if (this.lives <= 0) {
+        // `fatal` = this is the killing blow (last heart gone). Computed here,
+        // BEFORE outOfLives is set, so the hook can render a bigger "finishing"
+        // explosion for the fatal hit. lives is already decremented, so <= 0 means
+        // this obstacle emptied the last heart.
+        const fatal = this.lives <= 0;
+        this.onObstacleHit(x, y, size, fatal);
+        if (fatal) {
             this.lives = 0;
             this.outOfLives = true;
             // Out of lives is an immediate loss regardless of score/time.
@@ -280,9 +285,10 @@ class GameLogic {
 
     // Feedback hook for eating an obstacle. main.js overrides this to flash the
     // HUD hearts and play the explosion effect at (x, y) (obstacle centre, in
-    // game-canvas coords; size = obstacle width). Kept separate from onFoodEaten
-    // so the two never share a sound/effect.
-    onObstacleHit(x, y, size) {
+    // game-canvas coords; size = obstacle width). `fatal` is true on the hit that
+    // empties the last heart, so the effect layer can scale up the blast. Kept
+    // separate from onFoodEaten so the two never share a sound/effect.
+    onObstacleHit(x, y, size, fatal) {
     }
 
     eatFood(index) {
@@ -391,6 +397,20 @@ class GameLogic {
     // Running out of lives is always a loss, even if the score hit the target.
     isWin() {
         return !this.outOfLives && this.score >= this.targetScore;
+    }
+
+    // Which of the three end states we landed in, so the end screen can show the
+    // right copy:
+    //   'win'      — hit the target score with lives to spare
+    //   'no-lives' — ate the final Willgozz (obstacle); always a loss, even at target
+    //   'timeout'  — the clock hit 0 without reaching the target
+    // outOfLives is the invariant that separates the two loss reasons (a timeout
+    // never sets it). isWin() already treats outOfLives as an override, so the
+    // order here is safe.
+    getEndReason() {
+        if (this.isWin()) return 'win';
+        if (this.outOfLives) return 'no-lives';
+        return 'timeout';
     }
 
     setCanvasSize(width, height) {
