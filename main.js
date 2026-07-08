@@ -1,5 +1,10 @@
 // main.js - Main game orchestration and state management
 
+// How long to hold on the frozen, exploding board before switching to the end
+// screen when the player runs out of lives (ate the final Willgozz) — lets the
+// blast play out. Timeout game-overs skip this and transition immediately.
+const GAME_OVER_EXPLOSION_HOLD_MS = 1200;
+
 class Game {
     constructor() {
         this.cameraManager = new CameraManager();
@@ -72,6 +77,11 @@ class Game {
         this.bgMusic = document.getElementById('bg-music');
         this.gameCompletedSound = document.getElementById('game-completed-sound');
         this.eatingSound = document.getElementById('eating-sound');
+        this.boomSound = document.getElementById('boom-sound'); // Willgozz-hit explosion SFX
+
+        // The play area — shaken on obstacle hit (see triggerShake). The HUD is a
+        // sibling, so it stays put; only the canvases/video shake.
+        this.gameArea = document.querySelector('.game-area');
         
         // Settings Screen Elements
         this.settingsScreen = document.getElementById('settings-screen');
@@ -82,6 +92,12 @@ class Game {
         this.settingsCloseBtn = document.getElementById('settings-close-btn');
         this.tutorialCloseBtn = document.getElementById('tutorial-close-btn');
         this.tutorialStartBtn = document.getElementById('tutorial-start-btn');
+
+        // History Screen Elements (foundation — recent games from localStorage)
+        this.historyScreen = document.getElementById('history-screen');
+        this.historyBtn = document.getElementById('history-btn');
+        this.historyCloseBtn = document.getElementById('history-close-btn');
+        this.historyClearBtn = document.getElementById('history-clear-btn');
         
         // Photo Screen Elements
         this.photoScreen = document.getElementById('photo-screen');
@@ -181,6 +197,17 @@ class Game {
         if (this.tutorialStartBtn) {
             this.tutorialStartBtn.addEventListener('click', () => this.startGame());
         }
+
+        // History screen (foundation)
+        if (this.historyBtn) {
+            this.historyBtn.addEventListener('click', () => this.showHistory());
+        }
+        if (this.historyCloseBtn) {
+            this.historyCloseBtn.addEventListener('click', () => this.closeHistory());
+        }
+        if (this.historyClearBtn) {
+            this.historyClearBtn.addEventListener('click', () => this.clearHistory());
+        }
         
         // Photo screen buttons
         if (this.photoBtn) {
@@ -274,7 +301,9 @@ class Game {
             difficulty: localStorage.getItem('bangorBitesDifficulty') || 'medium',
             timerDuration: parseInt(localStorage.getItem('bangorBitesTimerDuration') || '60', 10),
             targetScore: parseInt(localStorage.getItem('bangorBitesTargetScore') || '30', 10),
-            lives: parseInt(localStorage.getItem('bangorBitesLives') || '3', 10)
+            lives: parseInt(localStorage.getItem('bangorBitesLives') || '3', 10),
+            // Screen shake on obstacle hit — on unless explicitly turned off.
+            screenShake: localStorage.getItem('bangorBitesScreenShake') !== 'false'
         };
 
         this.settings = settings;
@@ -384,6 +413,7 @@ class Game {
             localStorage.setItem('bangorBitesTimerDuration', this.settings.timerDuration.toString());
             localStorage.setItem('bangorBitesTargetScore', this.settings.targetScore.toString());
             localStorage.setItem('bangorBitesLives', this.settings.lives.toString());
+            localStorage.setItem('bangorBitesScreenShake', this.settings.screenShake.toString());
         }
     }
 
@@ -403,6 +433,10 @@ class Game {
         if (this.eatingSound) {
             this.eatingSound.volume = volume * 0.6; // Eating sound at 60% of volume setting
             this.eatingSound.muted = !this.settings.audioEnabled;
+        }
+        if (this.boomSound) {
+            this.boomSound.volume = volume * 0.8; // Explosion SFX a bit louder for impact
+            this.boomSound.muted = !this.settings.audioEnabled;
         }
     }
 
@@ -436,6 +470,61 @@ class Game {
         this.showScreen(this.previousScreen);
     }
 
+    showHistory() {
+        this.previousScreen = this.currentScreen;
+        this.renderHistory();
+        this.showScreen('history');
+    }
+
+    closeHistory() {
+        this.showScreen(this.previousScreen);
+    }
+
+    clearHistory() {
+        if (typeof GameHistory !== 'undefined') GameHistory.clear();
+        this.renderHistory();
+    }
+
+    // Render the recent-games list into the History screen. Foundation only — a
+    // flat list; richer stats/filtering come later.
+    renderHistory() {
+        const list = document.getElementById('history-list');
+        const empty = document.getElementById('history-empty');
+        if (!list) return;
+
+        const items = (typeof GameHistory !== 'undefined') ? GameHistory.load() : [];
+        list.innerHTML = '';
+        if (empty) empty.style.display = items.length ? 'none' : '';
+
+        const labels = { win: 'Menang', timeout: 'Waktu habis', 'no-lives': 'Kalah' };
+        items.forEach(it => {
+            const li = document.createElement('li');
+            li.className = 'history-item history-' + (it.result || 'timeout');
+            // Values are game-generated (numbers + fixed enums), not free text.
+            const result = document.createElement('span');
+            result.className = 'history-result';
+            result.textContent = labels[it.result] || '—';
+            const score = document.createElement('span');
+            score.className = 'history-score';
+            score.textContent = it.score != null ? it.score : 0;
+            const meta = document.createElement('span');
+            meta.className = 'history-meta';
+            const diff = (it.difficulty || '').toString().toUpperCase();
+            meta.textContent = [diff, this.formatHistoryDate(it.date)].filter(Boolean).join(' · ');
+            li.append(result, score, meta);
+            list.appendChild(li);
+        });
+    }
+
+    // Compact DD/MM HH:MM for a stored ISO date; '' if missing/unparseable.
+    formatHistoryDate(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        const p = (n) => String(n).padStart(2, '0');
+        return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
     async startGame() {
         // Check if camera is active
         if (!this.cameraManager.isActive) {
@@ -456,8 +545,15 @@ class Game {
         this.gameLogic = new GameLogic(this.gameCanvas, this.faceDetection, this.eatingSound, difficulty, timerDuration, targetScore, lives);
         this.gameLogic.reset();
         this._prevLives = lives; // baseline for the HUD damage-flash (see updateGameUI)
-        // Play the explosion FX at the obstacle's spot whenever one is eaten.
-        this.gameLogic.onObstacleHit = (x, y, size) => this.playExplosion(x, y, size);
+        this._endingGame = false; // clear the game-over guard for the new round
+        this.clearGameOverTimer(); // drop any pending hold from a prior round
+        // On any Willgozz hit: boom SFX + screen shake + explosion FX. The fatal
+        // (last-heart) hit gets a bigger blast and a stronger shake.
+        this.gameLogic.onObstacleHit = (x, y, size, fatal) => {
+            this.playBoom();
+            this.triggerShake(fatal);
+            this.playExplosion(x, y, size, fatal);
+        };
         this.stopExplosion(); // clear any leftover burst from a previous round
         
         // Play background music if enabled
@@ -555,13 +651,42 @@ class Game {
             
             // Check if game is over
             if (this.gameLogic.isGameOver) {
-                this.endGame();
+                this.onGameOver();
                 return;
             }
         }
 
         // Continue loop
         this.gameLoopId = requestAnimationFrame(() => this.gameLoop());
+    }
+
+    // Bridges gameLogic's game-over flag to the end screen. When the player ran
+    // out of lives (fatal Willgozz), hold on the frozen board for a beat so the
+    // explosion plays out before the end screen — the game loop has already
+    // stopped, but the explosion has its own rAF loop that keeps drawing. A
+    // timeout game-over has no blast to show, so it transitions immediately.
+    // Guarded so the loop can't schedule two transitions.
+    onGameOver() {
+        if (this._endingGame) return;
+        this._endingGame = true;
+
+        if (this.gameLogic?.outOfLives) {
+            this._gameOverTimer = setTimeout(() => {
+                this._gameOverTimer = null;
+                this.endGame();
+            }, GAME_OVER_EXPLOSION_HOLD_MS);
+        } else {
+            this.endGame();
+        }
+    }
+
+    // Cancel a pending game-over hold (quit/replay/home during the explosion beat)
+    // so a stale timer can't fire the end screen over a screen we've since left.
+    clearGameOverTimer() {
+        if (this._gameOverTimer) {
+            clearTimeout(this._gameOverTimer);
+            this._gameOverTimer = null;
+        }
     }
 
     updateGameUI() {
@@ -590,13 +715,40 @@ class Game {
         this.livesStat.classList.add('hud-damage');
     }
 
+    // One-shot explosion SFX on a Willgozz hit. Rewinds so rapid hits re-trigger
+    // instead of being swallowed while the clip is still playing. Volume/mute is
+    // applied in applySettings; a blocked autoplay just no-ops.
+    playBoom() {
+        const s = this.boomSound;
+        if (!s) return;
+        try { s.currentTime = 0; } catch (e) { /* not seekable yet */ }
+        const p = s.play();
+        if (p && p.catch) p.catch(() => { /* autoplay blocked — ignore */ });
+    }
+
+    // Brief shake of the play area on a Willgozz hit (fatal = stronger). Gated by
+    // the screenShake setting. Retriggered by removing + reflowing + re-adding the
+    // class so back-to-back hits each restart the animation.
+    triggerShake(fatal = false) {
+        if (!this.gameArea) return;
+        if (this.settings && this.settings.screenShake === false) return;
+        this.gameArea.classList.remove('shake', 'shake-strong');
+        void this.gameArea.offsetWidth; // reflow so the animation restarts
+        this.gameArea.classList.add(fatal ? 'shake-strong' : 'shake');
+    }
+
     // Play the green-screen explosion clip at (x, y) in game-canvas coords, scaled
     // to the obstacle size. Restarting an in-flight burst just moves it and rewinds.
-    playExplosion(x, y, obstacleSize) {
+    // `fatal` (last-heart hit) gets a larger "finishing" blast than a normal hit.
+    playExplosion(x, y, obstacleSize, fatal = false) {
         const v = this.explosionVideo;
         if (!v || !this.explosionCtx) return;
 
-        const box = Math.max(180, Math.min(380, (obstacleSize || 80) * 3.3));
+        // Fatal hit = bigger, more dramatic blast (pairs with the game-over hold);
+        // normal hit stays punchy but contained.
+        const box = fatal
+            ? Math.max(400, Math.min(860, (obstacleSize || 80) * 7))
+            : Math.max(260, Math.min(560, (obstacleSize || 80) * 4.6));
         this._explosion = { x, y, box, start: performance.now() };
 
         try { v.currentTime = 0; } catch (e) { /* not seekable yet */ }
@@ -675,10 +827,14 @@ class Game {
         }
     }
 
-    // Halt + clear any explosion (called on pause/quit/game-over/start).
+    // Halt + clear any explosion (called on pause/quit/game-over/start). Also
+    // silences the boom SFX and drops any in-flight shake so nothing lingers past
+    // the transition.
     stopExplosion() {
         const v = this.explosionVideo;
         if (v) { try { v.pause(); v.currentTime = 0; } catch (e) { /* ignore */ } }
+        if (this.boomSound) { try { this.boomSound.pause(); this.boomSound.currentTime = 0; } catch (e) { /* ignore */ } }
+        if (this.gameArea) this.gameArea.classList.remove('shake', 'shake-strong');
         this._explosion = null;
         this._stopExplosionRAF();
         this._clearExplosionCanvas();
@@ -687,6 +843,9 @@ class Game {
     pauseGame() {
         // Don't allow pausing mid-countdown — the game loop hasn't started yet.
         if (this.isCountingDown) return;
+        // Don't allow pausing during the game-over explosion hold — we're already
+        // transitioning to the end screen.
+        if (this._endingGame) return;
         if (this.gameLogic) {
             this.gameLogic.pause();
         }
@@ -721,6 +880,7 @@ class Game {
 
     endGame() {
         this.clearCountdown();
+        this.clearGameOverTimer();
         this.stopExplosion();
         if (this.faceWarning) this.faceWarning.classList.remove('active');
         if (this.gameLoopId) {
@@ -743,34 +903,73 @@ class Game {
         }
 
         if (this.gameLogic) {
+            const reason = this.gameLogic.getEndReason();
             this.finalScoreDisplay.textContent = this.gameLogic.getScore();
             this.endHighScoreDisplay.textContent = this.gameLogic.getHighScore();
-            this.applyEndResult(this.gameLogic.isWin());
+            this.applyEndResult(reason);
+            this.recordHistory(reason);
         }
 
         this.showScreen('end');
     }
 
-    // Switch the end screen between the "win" (Jawara) and "lose" variants —
-    // toggles a class for colour/theme and swaps the headline + subtitle copy.
-    applyEndResult(isWin) {
+    // Persist a finished game to the history (foundation — see gameHistory.js).
+    // Only real game-overs are recorded; a manual quit leaves isGameOver false and
+    // is skipped so partial/abandoned runs don't pollute the list.
+    recordHistory(reason) {
+        if (!this.gameLogic || !this.gameLogic.isGameOver) return;
+        if (typeof GameHistory === 'undefined') return; // script not loaded — fail safe
+        try {
+            GameHistory.add({
+                score: this.gameLogic.getScore(),
+                result: reason, // 'win' | 'timeout' | 'no-lives'
+                difficulty: this.gameLogic.difficulty,
+                target: this.gameLogic.getTargetScore(),
+                date: new Date().toISOString(),
+            });
+        } catch (e) {
+            console.warn('Failed to record game history:', e);
+        }
+    }
+
+    // Set the end screen for one of the three outcomes (see GameLogic.getEndReason):
+    //   'win'      — Jawara theme + celebratory copy
+    //   'no-lives' — lose theme + Willgozz copy (ran out of hearts)
+    //   'timeout'  — lose theme + out-of-time copy
+    // Both loss reasons share the 'lose' theme; only the headline/subtitle differ.
+    applyEndResult(reason) {
+        const isWin = reason === 'win';
         if (this.endScreen) {
             this.endScreen.classList.toggle('win', isWin);
             this.endScreen.classList.toggle('lose', !isWin);
         }
-        if (this.endTitle) {
-            this.endTitle.textContent = isWin ? 'JAWARA! 🔥' : 'Yaah, Kurang Dikit!';
+
+        let title, subtitle;
+        switch (reason) {
+            case 'win':
+                title = 'JAWARA! 🔥';
+                subtitle = 'Gokil! Kamu berhasil jadi juara!';
+                break;
+            case 'no-lives':
+                title = 'Kalah! Kena Willgozz! 💥';
+                subtitle = 'Hati kamu habis dilibas Willgozz. Awas, jangan dimakan!';
+                break;
+            case 'timeout':
+            default:
+                title = 'Yaah, Waktu Habis!';
+                subtitle = 'Belum jadi jawara nih. Yuk coba lagi!';
+                break;
         }
-        if (this.endSubtitle) {
-            this.endSubtitle.textContent = isWin
-                ? 'Gokil! Kamu berhasil jadi juara!'
-                : 'Belum jadi jawara nih. Yuk coba lagi!';
-        }
+
+        if (this.endTitle) this.endTitle.textContent = title;
+        if (this.endSubtitle) this.endSubtitle.textContent = subtitle;
     }
 
     showStartScreen() {
         this.showScreen('start');
         this.clearCountdown();
+        this.clearGameOverTimer();
+        this._endingGame = false;
         this.stopExplosion();
         if (this.faceWarning) this.faceWarning.classList.remove('active');
         if (this.gameLoopId) {
@@ -809,6 +1008,9 @@ class Game {
                 break;
             case 'tutorial':
                 if (this.tutorialScreen) this.tutorialScreen.classList.add('active');
+                break;
+            case 'history':
+                if (this.historyScreen) this.historyScreen.classList.add('active');
                 break;
             case 'photo':
                 if (this.photoScreen) this.photoScreen.classList.add('active');

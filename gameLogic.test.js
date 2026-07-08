@@ -211,3 +211,46 @@ test('spawnObstacle adds an obstacle-typed object', () => {
     assert.strictEqual(gl.foodObjects.length, 1);
     assert.strictEqual(gl.foodObjects[0].type, 'obstacle');
 });
+
+// --- End reason (drives the end-screen copy) ---
+
+test('getEndReason is "win" when the target is reached with lives to spare', () => {
+    const gl = makeGame();
+    gl.score = 30; // == target
+    assert.strictEqual(gl.getEndReason(), 'win');
+});
+
+test('getEndReason is "no-lives" when out of lives, even past the target', () => {
+    const gl = makeGame();
+    gl.score = 50; // well above target (30)
+    gl.outOfLives = true; // ate the final Willgozz
+    assert.strictEqual(gl.getEndReason(), 'no-lives', 'running out of lives overrides the score');
+});
+
+test('getEndReason is "timeout" when time runs out below target with lives left', () => {
+    const gl = makeGame();
+    gl.score = 10; // below target
+    gl.timeRemaining = 0;
+    assert.strictEqual(gl.outOfLives, false);
+    assert.strictEqual(gl.getEndReason(), 'timeout');
+});
+
+test('loseLife to zero yields the "no-lives" end reason', () => {
+    const gl = makeGame(); // 3 lives
+    gl.loseLife();
+    gl.loseLife();
+    gl.loseLife();
+    assert.strictEqual(gl.getEndReason(), 'no-lives');
+});
+
+test('onObstacleHit gets fatal=true only on the killing blow', () => {
+    const gl = makeGame(); // 3 lives
+    const fatals = [];
+    gl.onObstacleHit = (x, y, size, fatal) => fatals.push(fatal);
+
+    gl.loseLife(); // 3 -> 2
+    gl.loseLife(); // 2 -> 1
+    gl.loseLife(); // 1 -> 0 (fatal)
+
+    assert.deepStrictEqual(fatals, [false, false, true], 'only the last heart is fatal');
+});

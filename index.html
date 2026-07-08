@@ -37,6 +37,7 @@
                 <div class="home-buttons">
                     <button id="start-btn" class="home-btn home-btn-primary">Mulai Game</button>
                     <button id="tutorial-btn" class="home-btn home-btn-tertiary">Tutorial</button>
+                    <button id="history-btn" class="home-btn home-btn-tertiary">Riwayat</button>
                 </div>
                 <p class="home-tagline">GAHAR DARI GIGITAN PERTAMA</p>
                 <div id="camera-status" class="status-message home-status"></div>
@@ -160,6 +161,20 @@
                         <input type="range" class="panel-slider" data-setting="volume" min="0" max="100" value="50" aria-label="Volume">
                     </div>
 
+                    <!-- Screen shake: on/off (visual juice on obstacle hit) -->
+                    <div class="panel-row">
+                        <div class="panel-row-head">
+                            <span class="panel-label">
+                                <span class="panel-icon panel-icon-emoji" aria-hidden="true">📳</span>
+                                Getaran Layar
+                            </span>
+                            <label class="panel-toggle" aria-label="Aktifkan getaran layar">
+                                <input type="checkbox" data-setting="screenShake" checked>
+                                <span class="panel-toggle-track"></span>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Timer -->
                     <div class="panel-row">
                         <div class="panel-row-head">
@@ -250,6 +265,20 @@
                         <input type="range" class="panel-slider" data-setting="volume" min="0" max="100" value="50" aria-label="Volume">
                     </div>
 
+                    <!-- Screen shake: on/off (visual juice on obstacle hit) -->
+                    <div class="panel-row">
+                        <div class="panel-row-head">
+                            <span class="panel-label">
+                                <span class="panel-icon panel-icon-emoji" aria-hidden="true">📳</span>
+                                Getaran Layar
+                            </span>
+                            <label class="panel-toggle" aria-label="Aktifkan getaran layar">
+                                <input type="checkbox" data-setting="screenShake" checked>
+                                <span class="panel-toggle-track"></span>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Timer -->
                     <div class="panel-row">
                         <div class="panel-row-head">
@@ -332,6 +361,27 @@
                 </div>
             </div>
         </div>
+
+        <!-- History Screen (foundation — recent games from localStorage; list is
+             rendered in JS by renderHistory(). To be improved later). -->
+        <div id="history-screen" class="screen overlay">
+            <div class="panel-card history-panel">
+                <div class="panel-head">
+                    <span class="panel-head-icon panel-icon-emoji" aria-hidden="true">📜</span>
+                    <h2 class="panel-title">RIWAYAT</h2>
+                </div>
+                <div class="panel-divider"></div>
+
+                <ul id="history-list" class="history-list"></ul>
+                <p id="history-empty" class="history-empty">Belum ada permainan. Ayo main dulu!</p>
+
+                <div class="panel-divider"></div>
+                <div class="panel-buttons">
+                    <button id="history-close-btn" class="panel-btn panel-btn-primary">Kembali</button>
+                    <button id="history-clear-btn" class="panel-btn panel-btn-outline">Hapus riwayat</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Background Music -->
@@ -349,6 +399,12 @@
         <source src="assets/music/eating-sound-effect-36186.mp3" type="audio/mpeg">
     </audio>
 
+    <!-- Boom Sound Effect — plays when a Willgozz obstacle is eaten (paired with
+         the explosion FX). -->
+    <audio id="boom-sound">
+        <source src="assets/effects/boom-sound-effect.mp3" type="audio/mpeg">
+    </audio>
+
     <!-- MediaPipe Face Mesh — vendored locally (vendor/mediapipe/face_mesh) so the
          game loads offline at event booths. Must be served over http:// (not file://). -->
     <script src="vendor/mediapipe/face_mesh/face_mesh.js"></script>
@@ -358,6 +414,7 @@
     <script src="faceDetection.js"></script>
     <script src="gameLogic.js"></script>
     <script src="chromaKey.js"></script>
+    <script src="gameHistory.js"></script>
     <script src="main.js"></script>
 </body>
 </html>
