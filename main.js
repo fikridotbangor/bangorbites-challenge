@@ -624,6 +624,13 @@ class Game {
             return;
         }
 
+        // Wait for a genuinely decoded frame — drawing before HAVE_CURRENT_DATA can
+        // blit a blank/black frame (extra insurance on top of the black keyer).
+        if (v.readyState < 2) {
+            this._explosionRAF = requestAnimationFrame(() => this._renderExplosion());
+            return;
+        }
+
         const vw = v.videoWidth || 852;
         const vh = v.videoHeight || 480;
         const spriteW = Math.round(ex.box);

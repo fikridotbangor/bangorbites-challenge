@@ -27,6 +27,24 @@ test('keeps a bright white/smoke pixel', () => {
     assert.strictEqual(d[3], 255);
 });
 
+test('keys out a near-black pixel (black lead-in frame)', () => {
+    const d = px(10, 12, 8);
+    chromaKeyGreen(d);
+    assert.strictEqual(d[3], 0, 'black background becomes transparent');
+});
+
+test('keeps a dark-but-not-black pixel (above blackMax)', () => {
+    const d = px(60, 40, 20); // maxc 60 >= 45
+    chromaKeyGreen(d);
+    assert.strictEqual(d[3], 255);
+});
+
+test('keyBlack:false leaves near-black opaque', () => {
+    const d = px(10, 12, 8);
+    chromaKeyGreen(d, { keyBlack: false });
+    assert.strictEqual(d[3], 255);
+});
+
 test('suppresses green spill on a kept pixel (clamps g to max(r,b))', () => {
     // Greenish but not enough to key (g - max(r,b) = 30 <= gDom 40).
     const d = px(120, 150, 100);
