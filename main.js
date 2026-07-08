@@ -596,7 +596,7 @@ class Game {
         const v = this.explosionVideo;
         if (!v || !this.explosionCtx) return;
 
-        const box = Math.max(140, Math.min(300, (obstacleSize || 80) * 2.6));
+        const box = Math.max(180, Math.min(380, (obstacleSize || 80) * 3.3));
         this._explosion = { x, y, box, start: performance.now() };
 
         try { v.currentTime = 0; } catch (e) { /* not seekable yet */ }
