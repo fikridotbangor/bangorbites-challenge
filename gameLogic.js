@@ -1,7 +1,7 @@
 // gameLogic.js - Game mechanics, objects, collision detection, and scoring
 
 class GameLogic {
-    constructor(canvas, faceDetection, eatingSound = null, difficulty = 'medium', gameTime = 60, targetScore = 30) {
+    constructor(canvas, faceDetection, eatingSound = null, difficulty = 'medium', gameTime = 60, targetScore = 30, lives = 3) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.faceDetection = faceDetection;
@@ -12,12 +12,23 @@ class GameLogic {
         this.gameTime = gameTime;
         this.timeRemaining = this.gameTime;
         this.targetScore = targetScore; // score needed to "win" (Jawara)
+        // Lives: eating an obstacle (Willgozhead) costs one; hitting 0 ends the game
+        // as a loss regardless of score/time (see loseLife/isWin).
+        this.maxLives = lives;
+        this.lives = lives;
+        this.outOfLives = false;
         this.isPaused = false;
         this.isGameOver = false;
         this.difficulty = difficulty;
-        
+
+        // foodObjects holds BOTH food and obstacles; each carries a `type`
+        // ('food' | 'obstacle') so update/render/collision can share one loop.
         this.foodObjects = [];
         this.foodImages = [];
+        this.obstacleImages = [];
+        this.obstacleAssets = [
+            'assets/obstacles/Willgozhead.png',
+        ];
         this.foodAssets = [
             'assets/food-2/bangor_cheese_jr.webp',
             'assets/food-2/bbq_smoke_beef_cheese.webp',
@@ -42,8 +53,9 @@ class GameLogic {
         this.lastSpawnTime = 0;
         this.eatCooldown = 300; // 300ms cooldown between eating
         this.lastEatTime = 0;
-        
+
         this.loadFoodImages();
+        this.loadObstacleImages();
     }
 
     setDifficultySettings(difficulty) {
@@ -52,17 +64,20 @@ class GameLogic {
                 this.spawnInterval = 2500; // Spawn food every 2.5 seconds
                 this.baseSpeed = 0.8; // Slower speed
                 this.maxSpeed = 1.5;
+                this.obstacleChance = 0.12; // ~1 in 8 spawns is an obstacle
                 break;
             case 'hard':
                 this.spawnInterval = 1200; // Spawn food every 1.2 seconds
                 this.baseSpeed = 1.5; // Faster speed
                 this.maxSpeed = 3.0;
+                this.obstacleChance = 0.30; // ~1 in 3 spawns is an obstacle
                 break;
             case 'medium':
             default:
                 this.spawnInterval = 2000; // Spawn food every 2 seconds
                 this.baseSpeed = 1.0; // Normal speed
                 this.maxSpeed = 2.0;
+                this.obstacleChance = 0.20; // ~1 in 5 spawns is an obstacle
                 break;
         }
     }
@@ -87,10 +102,30 @@ class GameLogic {
         this.foodImages = await GameLogic._foodImagesPromise;
     }
 
+    async loadObstacleImages() {
+        // Same parallel + memoized load as the food images (see loadFoodImages).
+        if (!GameLogic._obstacleImagesPromise) {
+            GameLogic._obstacleImagesPromise = Promise.all(
+                this.obstacleAssets.map(asset => new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => {
+                        console.warn(`Failed to load ${asset}`);
+                        resolve(img); // keep index parity; broken image just draws nothing
+                    };
+                    img.src = asset;
+                }))
+            );
+        }
+        this.obstacleImages = await GameLogic._obstacleImagesPromise;
+    }
+
     reset() {
         this.score = 0;
         this.timeRemaining = this.gameTime;
         this.foodObjects = [];
+        this.lives = this.maxLives;
+        this.outOfLives = false;
         this.isPaused = false;
         this.isGameOver = false;
         this.lastSpawnTime = 0;
@@ -110,10 +145,14 @@ class GameLogic {
             return;
         }
 
-        // Spawn food objects
+        // Spawn a food or an obstacle (obstacle chance is difficulty-based)
         const currentTime = Date.now();
         if (currentTime - this.lastSpawnTime > this.spawnInterval) {
-            this.spawnFood();
+            if (Math.random() < this.obstacleChance) {
+                this.spawnObstacle();
+            } else {
+                this.spawnFood();
+            }
             this.lastSpawnTime = currentTime;
         }
 
@@ -152,10 +191,33 @@ class GameLogic {
             image: randomImage,
             speed: speed,
             rotation: Math.random() * Math.PI * 2,
-            rotationSpeed: (Math.random() - 0.5) * 0.1
+            rotationSpeed: (Math.random() - 0.5) * 0.1,
+            type: 'food'
         };
 
         this.foodObjects.push(food);
+    }
+
+    spawnObstacle() {
+        if (this.obstacleImages.length === 0) return;
+
+        const randomImage = this.obstacleImages[Math.floor(Math.random() * this.obstacleImages.length)];
+        const size = 60 + Math.random() * 40; // same size range as food
+        const speed = this.baseSpeed + Math.random() * (this.maxSpeed - this.baseSpeed);
+
+        const obstacle = {
+            x: Math.random() * (this.canvas.width - size),
+            y: -size,
+            width: size,
+            height: size,
+            image: randomImage,
+            speed: speed,
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 0.1,
+            type: 'obstacle'
+        };
+
+        this.foodObjects.push(obstacle);
     }
 
     checkCollisions() {
@@ -186,15 +248,37 @@ class GameLogic {
                 Math.pow(mouthY - foodCenterY, 2)
             );
 
-            // Check if food is within mouth radius
+            // Check if the object is within mouth radius
             const collisionRadius = mouthRadius + (food.width / 2);
             if (distance < collisionRadius) {
-                // Food eaten!
-                this.eatFood(i);
+                if (food.type === 'obstacle') {
+                    // Ate an obstacle (Willgozhead) — remove it and lose a life.
+                    this.foodObjects.splice(i, 1);
+                    this.loseLife();
+                } else {
+                    // Food eaten!
+                    this.eatFood(i);
+                }
                 this.lastEatTime = currentTime;
-                break; // Only eat one food at a time
+                break; // Only react to one object at a time
             }
         }
+    }
+
+    loseLife() {
+        this.lives--;
+        this.onObstacleHit();
+        if (this.lives <= 0) {
+            this.lives = 0;
+            this.outOfLives = true;
+            // Out of lives is an immediate loss regardless of score/time.
+            this.endGame();
+        }
+    }
+
+    // Feedback hook for eating an obstacle (main.js flashes the HUD hearts).
+    // Kept separate from onFoodEaten so the two never share a sound/effect.
+    onObstacleHit() {
     }
 
     eatFood(index) {
@@ -291,9 +375,18 @@ class GameLogic {
         return this.targetScore;
     }
 
-    // Win ("Jawara") when the final score reaches the target, else lose.
+    getLives() {
+        return this.lives;
+    }
+
+    getMaxLives() {
+        return this.maxLives;
+    }
+
+    // Win ("Jawara") only when the target score is reached AND lives remain.
+    // Running out of lives is always a loss, even if the score hit the target.
     isWin() {
-        return this.score >= this.targetScore;
+        return !this.outOfLives && this.score >= this.targetScore;
     }
 
     setCanvasSize(width, height) {
@@ -311,8 +404,9 @@ class GameLogic {
     }
 }
 
-// Shared decoded-image cache across all GameLogic instances (see loadFoodImages).
+// Shared decoded-image caches across all GameLogic instances (see load*Images).
 GameLogic._foodImagesPromise = null;
+GameLogic._obstacleImagesPromise = null;
 
 // Node-only export for unit tests. Browsers have no `module`, so this is a no-op
 // there and the game keeps using GameLogic as a global from the <script> tag.

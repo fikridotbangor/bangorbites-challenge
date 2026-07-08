@@ -122,3 +122,92 @@ test('isWin is false when the score is below the target (lose screen)', () => {
     gl.score = 29;
     assert.strictEqual(gl.isWin(), false);
 });
+
+// --- Obstacles + lives ---
+
+// Face that always has its mouth open at a fixed spot, so checkCollisions() fires.
+function makeGameWithMouth(mouth = { x: 400, y: 300, radius: 40 }) {
+    const canvas = { width: 800, height: 600, getContext: () => ({}) };
+    const faceDetection = {
+        isMouthOpen: () => true,
+        getMouthPosition: () => mouth,
+    };
+    const gl = new GameLogic(canvas, faceDetection, null, 'medium', 60, 30, 3);
+    gl.lastSpawnTime = Date.now();
+    gl.lastEatTime = 0; // large now - 0 > eatCooldown, so cooldown never blocks
+    return gl;
+}
+
+// A typed falling object at (x, y) — center lands at (x+30, y+30).
+function typedObj(type, x, y) {
+    return { x, y, width: 60, height: 60, image: null, speed: 0, rotation: 0, rotationSpeed: 0, type };
+}
+
+test('starts with the configured number of lives', () => {
+    const gl = makeGame(); // lives defaults to 3
+    assert.strictEqual(gl.getLives(), 3);
+    assert.strictEqual(gl.getMaxLives(), 3);
+});
+
+test('loseLife decrements; reaching 0 ends the game and flags outOfLives', () => {
+    const gl = makeGame();
+    gl.loseLife();
+    assert.strictEqual(gl.getLives(), 2);
+    assert.strictEqual(gl.outOfLives, false);
+    assert.strictEqual(gl.isGameOver, false);
+
+    gl.loseLife();
+    gl.loseLife();
+    assert.strictEqual(gl.getLives(), 0);
+    assert.strictEqual(gl.outOfLives, true);
+    assert.strictEqual(gl.isGameOver, true, 'out of lives ends the game');
+});
+
+test('isWin is false when out of lives even if the score reached the target', () => {
+    const gl = makeGame();
+    gl.score = 50; // above target (30)
+    gl.outOfLives = true;
+    assert.strictEqual(gl.isWin(), false, 'running out of lives is always a loss');
+});
+
+test('isWin is true when the target is reached and lives remain', () => {
+    const gl = makeGame();
+    gl.score = 30;
+    assert.strictEqual(gl.getLives(), 3);
+    assert.strictEqual(gl.isWin(), true);
+});
+
+test('reset restores lives to max and clears outOfLives', () => {
+    const gl = makeGame();
+    gl.lives = 0;
+    gl.outOfLives = true;
+    gl.reset();
+    assert.strictEqual(gl.getLives(), gl.getMaxLives());
+    assert.strictEqual(gl.outOfLives, false);
+});
+
+test('eating an obstacle at the mouth costs a life, not score', () => {
+    const gl = makeGameWithMouth();
+    gl.foodObjects = [typedObj('obstacle', 370, 270)]; // center (400,300) = mouth
+    gl.checkCollisions();
+    assert.strictEqual(gl.getLives(), 2, 'one life lost');
+    assert.strictEqual(gl.getScore(), 0, 'score unchanged by an obstacle');
+    assert.strictEqual(gl.foodObjects.length, 0, 'obstacle removed');
+});
+
+test('eating food at the mouth adds score and leaves lives intact', () => {
+    const gl = makeGameWithMouth();
+    gl.foodObjects = [typedObj('food', 370, 270)];
+    gl.checkCollisions();
+    assert.strictEqual(gl.getScore(), 1);
+    assert.strictEqual(gl.getLives(), 3, 'food never costs a life');
+    assert.strictEqual(gl.foodObjects.length, 0);
+});
+
+test('spawnObstacle adds an obstacle-typed object', () => {
+    const gl = makeGame();
+    gl.obstacleImages = [{}]; // pretend one obstacle image is loaded
+    gl.spawnObstacle();
+    assert.strictEqual(gl.foodObjects.length, 1);
+    assert.strictEqual(gl.foodObjects[0].type, 'obstacle');
+});

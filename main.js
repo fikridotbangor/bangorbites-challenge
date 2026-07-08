@@ -50,6 +50,8 @@ class Game {
         // Status and Score displays
         this.cameraStatus = document.getElementById('camera-status');
         this.currentScoreDisplay = document.getElementById('current-score');
+        this.currentLivesDisplay = document.getElementById('current-lives');
+        this.livesStat = document.querySelector('.hud-lives');
         this.highScoreDisplay = document.getElementById('high-score');
         this.timerDisplay = document.getElementById('timer');
         this.finalScoreDisplay = document.getElementById('final-score');
@@ -256,7 +258,8 @@ class Game {
             volume: parseInt(localStorage.getItem('bangorBitesVolume') || '50', 10),
             difficulty: localStorage.getItem('bangorBitesDifficulty') || 'medium',
             timerDuration: parseInt(localStorage.getItem('bangorBitesTimerDuration') || '60', 10),
-            targetScore: parseInt(localStorage.getItem('bangorBitesTargetScore') || '30', 10)
+            targetScore: parseInt(localStorage.getItem('bangorBitesTargetScore') || '30', 10),
+            lives: parseInt(localStorage.getItem('bangorBitesLives') || '3', 10)
         };
 
         this.settings = settings;
@@ -365,6 +368,7 @@ class Game {
             localStorage.setItem('bangorBitesDifficulty', this.settings.difficulty);
             localStorage.setItem('bangorBitesTimerDuration', this.settings.timerDuration.toString());
             localStorage.setItem('bangorBitesTargetScore', this.settings.targetScore.toString());
+            localStorage.setItem('bangorBitesLives', this.settings.lives.toString());
         }
     }
 
@@ -431,10 +435,12 @@ class Game {
         const difficulty = this.settings?.difficulty || 'medium';
         const timerDuration = this.settings?.timerDuration || 60;
         const targetScore = this.settings?.targetScore || 30;
+        const lives = this.settings?.lives || 3;
 
         // Initialize game logic with settings
-        this.gameLogic = new GameLogic(this.gameCanvas, this.faceDetection, this.eatingSound, difficulty, timerDuration, targetScore);
+        this.gameLogic = new GameLogic(this.gameCanvas, this.faceDetection, this.eatingSound, difficulty, timerDuration, targetScore, lives);
         this.gameLogic.reset();
+        this._prevLives = lives; // baseline for the HUD damage-flash (see updateGameUI)
         
         // Play background music if enabled
         if (this.bgMusic && this.settings?.audioEnabled) {
@@ -542,10 +548,28 @@ class Game {
 
     updateGameUI() {
         if (!this.gameLogic) return;
-        
+
         this.currentScoreDisplay.textContent = this.gameLogic.getScore();
         this.highScoreDisplay.textContent = this.gameLogic.getHighScore();
         this.timerDisplay.textContent = this.gameLogic.getTimeRemaining();
+
+        const lives = this.gameLogic.getLives();
+        if (this.currentLivesDisplay) {
+            this.currentLivesDisplay.textContent = lives;
+        }
+        // Flash the hearts when a life is lost (obstacle eaten).
+        if (this._prevLives != null && lives < this._prevLives) {
+            this.flashLives();
+        }
+        this._prevLives = lives;
+    }
+
+    // Brief red pulse on the HUD hearts when an obstacle costs a life.
+    flashLives() {
+        if (!this.livesStat) return;
+        this.livesStat.classList.remove('hud-damage');
+        void this.livesStat.offsetWidth; // reflow so the animation retriggers
+        this.livesStat.classList.add('hud-damage');
     }
 
     pauseGame() {

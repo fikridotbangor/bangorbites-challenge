@@ -1050,6 +1050,19 @@ body {
    width:auto lets it stretch, so pin both dimensions (like the gear/pause icons). */
 .hud-timer .hud-icon { width: 22px; height: 22px; }
 
+/* Lives (hearts) counter. Heart icon is square (24x24) — pin both dimensions. */
+.hud-lives .hud-icon { width: 24px; height: 24px; }
+/* Red pulse when a life is lost (toggled in main.js flashLives) */
+.hud-lives.hud-damage { animation: hudDamage 0.45s ease; }
+@keyframes hudDamage {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.25); filter: drop-shadow(0 0 8px rgba(226, 52, 47, 0.9)); }
+    100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .hud-lives.hud-damage { animation: none; }
+}
+
 .hud-highscore {
     color: #fffffd;
     font-size: clamp(0.9rem, 1.5vw, 1.4rem);
