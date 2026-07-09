@@ -212,6 +212,37 @@ test('spawnObstacle adds an obstacle-typed object', () => {
     assert.strictEqual(gl.foodObjects[0].type, 'obstacle');
 });
 
+// --- Size scaling (keeps food the same relative size on a bigger canvas) ---
+
+test('_sizeScale is 1 at the 800px reference width and scales with canvas width', () => {
+    const gl = makeGame(); // canvas.width = 800
+    assert.strictEqual(gl._sizeScale(), 1);
+    gl.canvas.width = 1600;
+    assert.strictEqual(gl._sizeScale(), 2);
+    gl.canvas.width = 400;
+    assert.strictEqual(gl._sizeScale(), 0.5);
+});
+
+test('spawned food/obstacle size scales with the canvas width', () => {
+    const gl = makeGame();
+    gl.foodImages = [{}];
+    gl.obstacleImages = [{}];
+
+    // At 800px, sizes are the tuned 60-100 range.
+    gl.spawnFood();
+    assert.ok(gl.foodObjects[0].width >= 60 && gl.foodObjects[0].width <= 100,
+        `800px food size 60-100, got ${gl.foodObjects[0].width}`);
+
+    // At 1600px (2x), the same range doubles to 120-200.
+    gl.canvas.width = 1600;
+    gl.foodObjects = [];
+    gl.spawnFood();
+    gl.spawnObstacle();
+    for (const o of gl.foodObjects) {
+        assert.ok(o.width >= 120 && o.width <= 200, `1600px size 120-200, got ${o.width}`);
+    }
+});
+
 // --- End reason (drives the end-screen copy) ---
 
 test('getEndReason is "win" when the target is reached with lives to spare', () => {

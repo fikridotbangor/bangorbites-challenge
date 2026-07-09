@@ -174,11 +174,20 @@ class GameLogic {
         this.checkCollisions();
     }
 
+    // Food/obstacle sizes were tuned against an 800px-wide play field. Scale them
+    // to the actual canvas width so they stay the SAME relative size when the
+    // logical buffer grows for a bigger display (see layout.js) — otherwise a
+    // larger canvas would make everything relatively smaller and harder to eat.
+    _sizeScale() {
+        const w = (this.canvas && this.canvas.width) ? this.canvas.width : 800;
+        return w / 800;
+    }
+
     spawnFood() {
         if (this.foodImages.length === 0) return;
 
         const randomImage = this.foodImages[Math.floor(Math.random() * this.foodImages.length)];
-        const size = 60 + Math.random() * 40; // Random size between 60-100
+        const size = (60 + Math.random() * 40) * this._sizeScale(); // 60-100 @ 800px width, scaled
         
         // Use difficulty-based speed
         const speed = this.baseSpeed + Math.random() * (this.maxSpeed - this.baseSpeed);
@@ -202,7 +211,7 @@ class GameLogic {
         if (this.obstacleImages.length === 0) return;
 
         const randomImage = this.obstacleImages[Math.floor(Math.random() * this.obstacleImages.length)];
-        const size = 60 + Math.random() * 40; // same size range as food
+        const size = (60 + Math.random() * 40) * this._sizeScale(); // same range as food, scaled to width
         const speed = this.baseSpeed + Math.random() * (this.maxSpeed - this.baseSpeed);
 
         const obstacle = {
