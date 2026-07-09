@@ -118,6 +118,11 @@ class Game {
         // Set initial canvas size
         this.resizeCanvases();
         window.addEventListener('resize', () => this.resizeCanvases());
+        // Re-fit once the webcam reports its real dimensions so the box matches the
+        // stream's aspect ratio (fixes video-vs-collision drift on non-4:3 cameras).
+        if (this.video) {
+            this.video.addEventListener('loadedmetadata', () => this.resizeCanvases());
+        }
         
         // Load mascot images for photo screen
         this.mascotImages = [];
@@ -129,39 +134,57 @@ class Game {
     }
 
     resizeCanvases() {
-        const maxWidth = Math.min(800, window.innerWidth - 40);
-        const maxHeight = Math.min(600, window.innerHeight - 100);
-        
-        // Set game canvas size
-        this.gameCanvas.width = maxWidth;
-        this.gameCanvas.height = maxHeight;
-        
-        // Set face canvas to match game canvas size for alignment
-        this.faceCanvas.width = maxWidth;
-        this.faceCanvas.height = maxHeight;
-        this.faceDetection.setCanvasSize(maxWidth, maxHeight);
-        
-        // Update video and face canvas styling to match
-        // Video should be visible behind game canvas
-        this.video.style.width = maxWidth + 'px';
-        this.video.style.height = maxHeight + 'px';
-        this.video.style.opacity = '1';
-        this.faceCanvas.style.width = maxWidth + 'px';
-        this.faceCanvas.style.height = maxHeight + 'px';
-        this.gameCanvas.style.width = maxWidth + 'px';
-        this.gameCanvas.style.height = maxHeight + 'px';
+        // Decouple the logical canvas BUFFER (pixel resolution) from the on-screen
+        // DISPLAY size: the buffer is capped (perf + stable game balance) while the
+        // element is CSS-scaled to fill the available area, so the play field fills
+        // a big display (e.g. a 42" TV) without shrinking the food or blowing up the
+        // per-pixel work. The box ratio follows the webcam so the mirrored video and
+        // the face-landmark -> canvas mapping stay aligned (no collision drift).
+        // See layout.js / computeCanvasBox.
+        const aspect = this.getCameraAspect();
+        const availW = Math.max(320, window.innerWidth - 40);
+        const availH = Math.max(240, window.innerHeight - 100);
+        const box = (typeof computeCanvasBox === 'function')
+            ? computeCanvasBox(aspect, availW, availH)
+            : { dispW: Math.min(800, availW), dispH: Math.min(600, availH),
+                bufW: Math.min(800, availW), bufH: Math.min(600, availH) };
 
-        // Keep the explosion overlay 1:1 with the game canvas so hit coords line up.
+        // Logical buffer — the drawing + collision coordinate space. Face + explosion
+        // canvases share it 1:1 so hit coords line up.
+        this.gameCanvas.width = box.bufW;
+        this.gameCanvas.height = box.bufH;
+        this.faceCanvas.width = box.bufW;
+        this.faceCanvas.height = box.bufH;
+        this.faceDetection.setCanvasSize(box.bufW, box.bufH);
         if (this.explosionCanvas) {
-            this.explosionCanvas.width = maxWidth;
-            this.explosionCanvas.height = maxHeight;
-            this.explosionCanvas.style.width = maxWidth + 'px';
-            this.explosionCanvas.style.height = maxHeight + 'px';
+            this.explosionCanvas.width = box.bufW;
+            this.explosionCanvas.height = box.bufH;
         }
+
+        // Display size (CSS) — all layers share the exact same box so they overlay.
+        const px = (el) => {
+            if (!el) return;
+            el.style.width = box.dispW + 'px';
+            el.style.height = box.dispH + 'px';
+        };
+        px(this.video);
+        this.video.style.opacity = '1';
+        px(this.faceCanvas);
+        px(this.gameCanvas);
+        px(this.explosionCanvas);
 
         if (this.gameLogic) {
-            this.gameLogic.setCanvasSize(maxWidth, maxHeight);
+            this.gameLogic.setCanvasSize(box.bufW, box.bufH);
         }
+    }
+
+    // Webcam aspect (width/height) once the stream reports it; 16:9 default until
+    // then. resizeCanvases() is re-run on the video's 'loadedmetadata' so the box
+    // switches to the real ratio as soon as the camera is up.
+    getCameraAspect() {
+        const w = this.video && this.video.videoWidth;
+        const h = this.video && this.video.videoHeight;
+        return (w && h) ? (w / h) : (16 / 9);
     }
 
     attachEventListeners() {
@@ -250,6 +273,10 @@ class Game {
             
             this.cameraStatus.textContent = '✓ Kamera berhasil diaktifkan!';
             this.cameraStatus.className = 'status-message success';
+
+            // Re-fit now that the stream is live so the box adopts the real webcam
+            // aspect (in case 'loadedmetadata' fired before its listener was attached).
+            this.resizeCanvases();
 
             // Detection loop is NOT started here — it only runs during actual
             // gameplay (see startGame/startFaceDetectionLoop). No point burning
