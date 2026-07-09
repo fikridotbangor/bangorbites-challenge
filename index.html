@@ -128,9 +128,29 @@
                     <canvas id="photo-canvas"></canvas>
                 </div>
                 <div class="button-group" style="margin-top: 2rem;">
+                    <button id="retake-photo-btn" class="btn btn-secondary">🔄 Ulangi Foto</button>
                     <button id="download-photo-btn" class="btn btn-primary">💾 Download Foto</button>
                     <button id="share-photo-btn" class="btn btn-secondary">📤 Share</button>
                     <button id="photo-close-btn" class="btn btn-small">Kembali</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Capture Screen — dedicated page: live webcam preview + 3-2-1 countdown
+             before the shutter, so the user can pose. Feeds the Photo result screen. -->
+        <div id="capture-screen" class="screen overlay">
+            <div class="capture-panel">
+                <h2 class="capture-title">Gaya kamu! 📸</h2>
+                <div class="capture-stage">
+                    <canvas id="capture-preview"></canvas>
+                    <div class="capture-frame" aria-hidden="true"></div>
+                    <div class="capture-score-badge">Skor <span id="capture-score">0</span></div>
+                    <div id="capture-countdown" class="capture-countdown" aria-hidden="true"></div>
+                    <div id="capture-flash" class="capture-flash" aria-hidden="true"></div>
+                </div>
+                <div class="capture-buttons">
+                    <button id="capture-shoot-btn" class="btn btn-primary">📸 Ambil Foto</button>
+                    <button id="capture-cancel-btn" class="btn btn-small">Kembali</button>
                 </div>
             </div>
         </div>
@@ -416,6 +436,7 @@
     <script src="chromaKey.js"></script>
     <script src="gameHistory.js"></script>
     <script src="layout.js"></script>
+    <script src="photoCapture.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

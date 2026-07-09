@@ -106,6 +106,16 @@ class Game {
         this.downloadPhotoBtn = document.getElementById('download-photo-btn');
         this.sharePhotoBtn = document.getElementById('share-photo-btn');
         this.photoCloseBtn = document.getElementById('photo-close-btn');
+        this.retakePhotoBtn = document.getElementById('retake-photo-btn');
+
+        // Capture Screen Elements (live preview + 3-2-1 countdown before the shutter)
+        this.captureScreen = document.getElementById('capture-screen');
+        this.capturePreview = document.getElementById('capture-preview');
+        this.captureScoreEl = document.getElementById('capture-score');
+        this.captureCountdownEl = document.getElementById('capture-countdown');
+        this.captureFlashEl = document.getElementById('capture-flash');
+        this.captureShootBtn = document.getElementById('capture-shoot-btn');
+        this.captureCancelBtn = document.getElementById('capture-cancel-btn');
         
         // Settings controls are now data-attribute driven ([data-setting] /
         // [data-display] / [data-dropdown]) so the Pause and Settings panels can
@@ -232,9 +242,18 @@ class Game {
             this.historyClearBtn.addEventListener('click', () => this.clearHistory());
         }
         
-        // Photo screen buttons
+        // Photo flow: End -> live Capture page (pose + countdown) -> Photo result.
         if (this.photoBtn) {
-            this.photoBtn.addEventListener('click', () => this.showPhotoScreen());
+            this.photoBtn.addEventListener('click', () => this.showCaptureScreen());
+        }
+        if (this.captureShootBtn) {
+            this.captureShootBtn.addEventListener('click', () => this.runCaptureCountdown());
+        }
+        if (this.captureCancelBtn) {
+            this.captureCancelBtn.addEventListener('click', () => this.cancelCapture());
+        }
+        if (this.retakePhotoBtn) {
+            this.retakePhotoBtn.addEventListener('click', () => this.retakePhoto());
         }
         if (this.downloadPhotoBtn) {
             this.downloadPhotoBtn.addEventListener('click', () => this.downloadPhoto());
@@ -1042,18 +1061,178 @@ class Game {
             case 'photo':
                 if (this.photoScreen) this.photoScreen.classList.add('active');
                 break;
+            case 'capture':
+                if (this.captureScreen) this.captureScreen.classList.add('active');
+                break;
         }
 
         this.currentScreen = screenName;
     }
 
-    async showPhotoScreen() {
-        // Capture photo
+    // Enter the dedicated capture page: live webcam preview + score, ready to pose.
+    // The shutter itself fires from runCaptureCountdown() -> doCapture().
+    showCaptureScreen() {
+        // Photo result's "Kembali" returns to the score (end) screen, not here.
+        this.previousScreen = 'end';
+        if (this.captureScoreEl && this.gameLogic) {
+            this.captureScoreEl.textContent = this.gameLogic.getScore();
+        }
+        this.resetCaptureUI();
+        this.showScreen('capture');
+        this.startCapturePreview();
+    }
+
+    resetCaptureUI() {
+        this.clearCaptureTimer();
+        this._capturing = false;
+        if (this.captureCountdownEl) {
+            this.captureCountdownEl.classList.remove('active');
+            this.captureCountdownEl.textContent = '';
+        }
+        if (this.captureFlashEl) this.captureFlashEl.classList.remove('active');
+        if (this.captureShootBtn) this.captureShootBtn.disabled = false;
+    }
+
+    // rAF loop mirroring the live webcam into the square preview canvas, using the
+    // same letterbox framing capturePhoto() bakes — so what the user poses is what
+    // they get (WYSIWYG). Buffer is half the 1080 photo res: crisp enough on-screen,
+    // cheaper to draw every frame.
+    startCapturePreview() {
+        if (!this.capturePreview || !this.video) return;
+        const ctx = this.capturePreview.getContext('2d');
+        const size = 540;
+        this.capturePreview.width = size;
+        this.capturePreview.height = size;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        const draw = () => {
+            this._capturePreviewId = requestAnimationFrame(draw);
+            const vw = this.video.videoWidth, vh = this.video.videoHeight;
+            ctx.fillStyle = '#212121';
+            ctx.fillRect(0, 0, size, size);
+            if (!vw || !vh) return;
+            // Fit the whole frame into the square (letterbox/pillarbox), matching capturePhoto().
+            const vAspect = vw / vh;
+            let dw, dh, dx, dy;
+            if (vAspect > 1) { dw = size; dh = size / vAspect; dx = 0; dy = (size - dh) / 2; }
+            else { dh = size; dw = size * vAspect; dx = (size - dw) / 2; dy = 0; }
+            ctx.save();
+            ctx.scale(-1, 1); // mirror, same as the game view + baked photo
+            ctx.drawImage(this.video, -dx - dw, dy, dw, dh);
+            ctx.restore();
+        };
+        this.stopCapturePreview();
+        draw();
+    }
+
+    stopCapturePreview() {
+        if (this._capturePreviewId) {
+            cancelAnimationFrame(this._capturePreviewId);
+            this._capturePreviewId = null;
+        }
+    }
+
+    // "Ambil Foto": run the 3-2-1 countdown (beep each tick) then flash + shutter.
+    runCaptureCountdown() {
+        if (this._capturing) return;
+        this._capturing = true;
+        if (this.captureShootBtn) this.captureShootBtn.disabled = true;
+
+        const seq = (typeof countdownSequence === 'function') ? countdownSequence(3) : [3, 2, 1];
+        let i = 0;
+
+        const showTick = () => {
+            if (i < seq.length) {
+                const n = seq[i];
+                if (this.captureCountdownEl) {
+                    this.captureCountdownEl.textContent = n;
+                    // Re-trigger the pop animation on each tick.
+                    this.captureCountdownEl.classList.remove('active');
+                    void this.captureCountdownEl.offsetWidth;
+                    this.captureCountdownEl.classList.add('active');
+                }
+                this.playBeep(880, 120);
+                i++;
+                this._captureTimer = setTimeout(showTick, 1000);
+            } else {
+                this._captureTimer = null;
+                if (this.captureCountdownEl) this.captureCountdownEl.classList.remove('active');
+                this.playBeep(1320, 220); // higher "go" tone at the shutter
+                this.flashAndCapture();
+            }
+        };
+        showTick();
+    }
+
+    clearCaptureTimer() {
+        if (this._captureTimer) {
+            clearTimeout(this._captureTimer);
+            this._captureTimer = null;
+        }
+    }
+
+    flashAndCapture() {
+        if (this.captureFlashEl) {
+            this.captureFlashEl.classList.remove('active');
+            void this.captureFlashEl.offsetWidth;
+            this.captureFlashEl.classList.add('active');
+        }
+        // Let the flash paint first, then grab the frame + move to the result screen.
+        this._captureTimer = setTimeout(() => this.doCapture(), 120);
+    }
+
+    async doCapture() {
+        this._captureTimer = null;
         await this.capturePhoto();
-        
-        // Show photo screen
-        this.previousScreen = this.currentScreen;
+        this.stopCapturePreview();
+        this._capturing = false;
+        if (this.captureShootBtn) this.captureShootBtn.disabled = false;
+        if (this.captureFlashEl) this.captureFlashEl.classList.remove('active');
         this.showScreen('photo');
+    }
+
+    // "Ulangi Foto" on the result screen — back to the live capture page to re-pose.
+    retakePhoto() {
+        this.showCaptureScreen();
+    }
+
+    // "Kembali" on the capture page — abort the shot and return to the score screen.
+    cancelCapture() {
+        this.resetCaptureUI();
+        this.stopCapturePreview();
+        this.showScreen('end');
+    }
+
+    // Short WebAudio beep for the countdown ticks + shutter. No audio asset needed;
+    // gated by the audio setting and scaled by the volume slider. The capture-button
+    // click is the user gesture that unblocks the AudioContext, so autoplay policy is
+    // satisfied. Audio here is optional polish — a failure must never break capture.
+    playBeep(freq = 880, durationMs = 120) {
+        if (!this.settings || this.settings.audioEnabled === false) return;
+        try {
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            if (!Ctx) return;
+            if (!this._audioCtx) this._audioCtx = new Ctx();
+            const ctx = this._audioCtx;
+            if (ctx.state === 'suspended') ctx.resume();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const vol = (this.settings.volume != null ? this.settings.volume : 50) / 100;
+            const peak = Math.max(0.02, vol * 0.5);
+            const now = ctx.currentTime;
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(peak, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + durationMs / 1000);
+            osc.start(now);
+            osc.stop(now + durationMs / 1000 + 0.02);
+        } catch (e) {
+            // Audio is optional polish — ignore and keep the capture flow going.
+        }
     }
 
     async capturePhoto() {
@@ -1111,8 +1290,59 @@ class Game {
         
         // Draw overlay dengan score
         this.drawPhotoOverlay(ctx, canvasWidth, canvasHeight);
-        
+
+        // Win/lose stamp at the top (Stempel JAWARA menang/kalah)
+        this.drawPhotoStamp(ctx, canvasWidth, canvasHeight);
+
         return this.photoCanvas.toDataURL('image/png');
+    }
+
+    // Rubber-stamp badge baked at the top of the photo — "JAWARA! 🔥" on a win, the
+    // consolation "SANG PENANTANG" on a loss. Copy + colour come from the pure
+    // captureStamp() helper (keyed off getEndReason); rendering stays here in the DOM
+    // layer. Centered between the two top-corner mascots, so no overlap.
+    drawPhotoStamp(ctx, width, height) {
+        const reason = this.gameLogic ? this.gameLogic.getEndReason() : 'timeout';
+        const stamp = (typeof captureStamp === 'function')
+            ? captureStamp(reason)
+            : { text: 'SANG PENANTANG', color: '#ff8222', won: false };
+
+        ctx.save();
+        ctx.translate(width / 2, 130);
+        ctx.rotate(-0.06); // subtle tilt for a stamped-on feel
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const fontSize = 68;
+        ctx.font = `bold ${fontSize}px Arial`;
+        const textW = ctx.measureText(stamp.text).width;
+        const padX = 40, padY = 22;
+        const boxW = textW + padX * 2;
+        const boxH = fontSize + padY * 2;
+
+        // Dark pill + coloured border, then the coloured text.
+        ctx.fillStyle = 'rgba(33, 33, 33, 0.55)';
+        this._roundRect(ctx, -boxW / 2, -boxH / 2, boxW, boxH, 18);
+        ctx.fill();
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = stamp.color;
+        this._roundRect(ctx, -boxW / 2, -boxH / 2, boxW, boxH, 18);
+        ctx.stroke();
+
+        ctx.fillStyle = stamp.color;
+        ctx.fillText(stamp.text, 0, 4);
+        ctx.restore();
+    }
+
+    // Path a rounded rectangle (canvas roundRect() isn't in every engine we target).
+    _roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
     }
 
     async loadMascotImages() {
