@@ -1504,7 +1504,7 @@ class Game {
         // Hashtag - centered
         ctx.fillStyle = '#4daadd';
         ctx.font = '27px Arial'; // Scaled from 20
-        ctx.fillText('#BangorBitesChallenge', width / 2, height - 34); // Scaled from 25
+        ctx.fillText('#BangorJawaraChallenge', width / 2, height - 34); // Scaled from 25
         
         // Optional: Draw border
         ctx.strokeStyle = '#212121';
@@ -1563,7 +1563,7 @@ class Game {
                 if (navigator.canShare({ files: [file] })) {
                     await navigator.share({
                         title: 'Bangor Bites Challenge - Skor Saya!',
-                        text: `Saya dapat skor ${score} di Bangor Bites Challenge! Coba kalahkan skorku! #BangorBitesChallenge`,
+                        text: `Saya dapat skor ${score} di Bangor Bites Challenge! Coba kalahkan skorku! #BangorJawaraChallenge`,
                         files: [file]
                     });
                     return;
