@@ -29,22 +29,11 @@ class GameLogic {
         this.obstacleAssets = [
             'assets/obstacles/Willgozhead.png',
         ];
+        // Only the Jawara Cheese burger is spawned as edible food now (was a 15-item
+        // mix). spawnFood() picks randomly from this list, so a single entry means
+        // every falling food is this asset.
         this.foodAssets = [
-            'assets/food-2/bangor_cheese_jr.webp',
-            'assets/food-2/bbq_smoke_beef_cheese.webp',
-            'assets/food-2/bbq_smoke_beef.webp',
-            'assets/food-2/bfc_paha.webp',
-            'assets/food-2/congor_cheese.webp',
-            'assets/food-2/creamy_garlic_cheese.webp',
-            'assets/food-2/french_fries.webp',
-            'assets/food-2/fries_cheese.webp',
-            'assets/food-2/hotdog.webp',
-            'assets/food-2/jelata_cheese.webp',
-            'assets/food-2/juragan_cheese.webp',
-            'assets/food-2/ningrat_cheese.webp',
-            'assets/food-2/pitik_cheese.webp',
-            'assets/food-2/pitik_fire_cheese.webp',
-            'assets/food-2/sultan.webp',
+            'assets/jawara-cheese/jawara-cheese.png',
         ];
         
         // Difficulty-based settings
@@ -188,15 +177,25 @@ class GameLogic {
 
         const randomImage = this.foodImages[Math.floor(Math.random() * this.foodImages.length)];
         const size = (60 + Math.random() * 40) * this._sizeScale(); // 60-100 @ 800px width, scaled
-        
+
+        // Preserve the sprite's aspect ratio so a non-square asset (jawara-cheese is
+        // 652x462) isn't squished into a square. Width governs (drives collision via
+        // food.width); height follows the image. Falls back to square if the image
+        // hasn't reported its natural size (e.g. test mocks). Obstacles are left as-is.
+        const natW = randomImage && randomImage.naturalWidth ? randomImage.naturalWidth : 0;
+        const natH = randomImage && randomImage.naturalHeight ? randomImage.naturalHeight : 0;
+        const aspect = (natW > 0 && natH > 0) ? (natW / natH) : 1;
+        const width = size;
+        const height = size / aspect;
+
         // Use difficulty-based speed
         const speed = this.baseSpeed + Math.random() * (this.maxSpeed - this.baseSpeed);
-        
+
         const food = {
-            x: Math.random() * (this.canvas.width - size),
-            y: -size,
-            width: size,
-            height: size,
+            x: Math.random() * (this.canvas.width - width),
+            y: -height,
+            width: width,
+            height: height,
             image: randomImage,
             speed: speed,
             rotation: Math.random() * Math.PI * 2,

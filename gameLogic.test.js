@@ -212,6 +212,35 @@ test('spawnObstacle adds an obstacle-typed object', () => {
     assert.strictEqual(gl.foodObjects[0].type, 'obstacle');
 });
 
+// --- Food aspect ratio (jawara-cheese.png is 652x462, not square) ---
+
+test('spawnFood preserves a landscape sprite aspect ratio (no squish)', () => {
+    const gl = makeGame();
+    gl.foodImages = [{ naturalWidth: 652, naturalHeight: 462 }]; // jawara-cheese dims
+    gl.spawnFood();
+    assert.strictEqual(gl.foodObjects.length, 1);
+    const f = gl.foodObjects[0];
+    assert.ok(Math.abs(f.width / f.height - 652 / 462) < 1e-9,
+        `food width/height should match the sprite aspect, got ${f.width / f.height}`);
+    assert.ok(f.height < f.width, 'a landscape sprite is drawn wider than tall');
+});
+
+test('spawnFood keeps a square sprite square', () => {
+    const gl = makeGame();
+    gl.foodImages = [{ naturalWidth: 512, naturalHeight: 512 }];
+    gl.spawnFood();
+    assert.strictEqual(gl.foodObjects[0].width, gl.foodObjects[0].height);
+});
+
+test('spawnFood falls back to square when the image reports no natural size', () => {
+    const gl = makeGame();
+    gl.foodImages = [{}]; // not-yet-loaded / mock: no naturalWidth
+    gl.spawnFood();
+    const f = gl.foodObjects[0];
+    assert.strictEqual(f.width, f.height, 'square fallback avoids NaN/divide-by-zero');
+    assert.ok(Number.isFinite(f.height), 'height stays finite');
+});
+
 // --- Size scaling (keeps food the same relative size on a bigger canvas) ---
 
 test('_sizeScale is 1 at the 800px reference width and scales with canvas width', () => {
