@@ -958,6 +958,139 @@ body {
     display: block;
 }
 
+/* Capture Screen — dedicated live-preview page with a 3-2-1 countdown */
+.capture-panel {
+    background: #fffee6;
+    padding: 32px;
+    border-radius: 8px;
+    border: 3px solid #212121;
+    max-width: 620px;
+    width: 92%;
+    text-align: center;
+}
+
+.capture-title {
+    font-size: 2.2rem;
+    color: #212121;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+}
+
+.capture-stage {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+    background: #212121;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+#capture-preview {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Branded framing guide with two corner brackets (top-left / bottom-right) */
+.capture-frame {
+    position: absolute;
+    inset: 12px;
+    border: 4px solid rgba(255, 254, 230, 0.85);
+    border-radius: 10px;
+    pointer-events: none;
+}
+.capture-frame::before,
+.capture-frame::after {
+    content: '';
+    position: absolute;
+    width: 42px;
+    height: 42px;
+    border: 5px solid #8ec622;
+}
+.capture-frame::before {
+    top: -4px;
+    left: -4px;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 10px 0 0 0;
+}
+.capture-frame::after {
+    bottom: -4px;
+    right: -4px;
+    border-left: none;
+    border-top: none;
+    border-radius: 0 0 10px 0;
+}
+
+.capture-score-badge {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(33, 33, 33, 0.78);
+    color: #fffee6;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 6px 18px;
+    border-radius: 999px;
+    border: 2px solid #8ec622;
+    pointer-events: none;
+    white-space: nowrap;
+}
+.capture-score-badge span {
+    color: #8ec622;
+}
+
+.capture-countdown {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12rem;
+    font-weight: 900;
+    color: #fffee6;
+    text-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    pointer-events: none;
+    line-height: 1;
+}
+.capture-countdown.active {
+    animation: countPop 1s ease-out;
+}
+@keyframes countPop {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+    20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+    70%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+}
+
+/* White shutter flash overlaid on the preview at the moment of capture */
+.capture-flash {
+    position: absolute;
+    inset: 0;
+    background: #ffffff;
+    opacity: 0;
+    pointer-events: none;
+}
+.capture-flash.active {
+    animation: shutterFlash 0.4s ease-out;
+}
+@keyframes shutterFlash {
+    0%   { opacity: 0; }
+    10%  { opacity: 0.95; }
+    100% { opacity: 0; }
+}
+
+.capture-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 1.75rem;
+}
+
 /* Responsive for Settings and Tutorial */
 @media (max-width: 768px) {
     .settings-content,
